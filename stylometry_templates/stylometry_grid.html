@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#F7F7F7">
+    <title>Эталонные образцы — Стилометрия</title>
+    <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css">
+</head>
+<body>
+    <main
+        class="app-shell grid-page page-with-image"
+        style="--stylometry-page-image: url('{{ .stylometry_cover_url }}')"
+    >
+        <div class="page-shade" aria-hidden="true"></div>
+
+        <section class="page-content">
+            <h1>Эталонные образцы</h1>
+
+            <form class="filter-form" action="/samples/grid" method="get">
+                <label for="stylometry_avg_len" class="visually-hidden">
+                    Максимальная средняя длина предложения
+                </label>
+                <span class="search-icon" aria-hidden="true">⌕</span>
+                <input
+                    id="stylometry_avg_len"
+                    type="text"
+                    inputmode="decimal"
+                    name="stylometry_avg_len"
+                    value="{{ .stylometry_avg_len }}"
+                    placeholder="Длина предложения — не больше..."
+                >
+                <button type="submit">Найти</button>
+            </form>
+
+            {{ if .stylometry_filter_on }}
+                <div class="filter-state">
+                    <span>Длина ≤ {{ .stylometry_avg_len }} слов</span>
+                    <a href="/samples/grid">Сбросить</a>
+                </div>
+            {{ end }}
+
+            {{ if .has_stylometry_samples }}
+                <div class="star-grid">
+                    {{ range .stylometry_samples }}
+                        <a
+                            class="star-card"
+                            href="/samples/{{ .StylometryID }}"
+                            data-video-url="{{ .StylometryVideoURL }}"
+                        >
+                            <img src="{{ .StylometryImageURL }}" alt="{{ .StylometryTitle }}">
+                            <span class="star-card__shade" aria-hidden="true"></span>
+
+                            {{ if eq .StylometryStatus "draft" }}
+                                <span class="star-card__status">черновик</span>
+                            {{ end }}
+
+                            <div class="star-card__body">
+                                <p class="star-card__distance">Длина = {{ .StylometryAvgSentLen }} слов</p>
+                                <h2>{{ .StylometryTitle }}</h2>
+                                <span class="star-card__likes">
+                                    {{ .LikesCount }} <span aria-hidden="true">♥</span>
+                                </span>
+                            </div>
+                        </a>
+                    {{ end }}
+                </div>
+            {{ else }}
+                <div class="empty-state">
+                    <strong>Эталоны не найдены</strong>
+                    <p>Увеличь допустимую длину предложения или сбрось фильтр.</p>
+                    <a href="/samples/grid">Показать все</a>
+                </div>
+            {{ end }}
+        </section>
+
+        <nav class="bottom-nav" aria-label="Основная навигация">
+            <a class="nav-item" href="/samples">
+                <span class="nav-icon" aria-hidden="true">●</span>
+                <span>Лента</span>
+            </a>
+            <a class="nav-item" href="/samples/draft">
+                <span class="nav-icon" aria-hidden="true">＋</span>
+                <span>Добавить</span>
+            </a>
+            <a class="nav-item nav-item--active" href="/samples/grid" aria-current="page">
+                <span class="nav-icon" aria-hidden="true">▦</span>
+                <span>Плитка</span>
+            </a>
+        </nav>
+    </main>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# --- этап сборки ---
+FROM golang:1.22-alpine AS builder
+WORKDIR /app
+
+COPY stylometry_go.mod go.mod
+COPY stylometry_go.sum go.sum
+RUN go mod download
+
+COPY . .
+RUN go mod tidy
+RUN CGO_ENABLED=0 GOOS=linux go build -o /stylometry ./stylometry_cmd/stylometry_stylometry
+
+# --- финальный образ ---
+FROM alpine:3.19
+WORKDIR /app
+
+COPY --from=builder /stylometry ./stylometry
+COPY stylometry_templates ./stylometry_templates
+COPY stylometry_static ./stylometry_static
+
+EXPOSE 8080
+ENTRYPOINT ["./stylometry"]

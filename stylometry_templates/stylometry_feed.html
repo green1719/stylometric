@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#F7F7F7">
+    <title>{{ .stylometry_sample.StylometryTitle }} — Стилометрия</title>
+    <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css">
+</head>
+<body>
+    <main class="app-shell feed-page">
+        <video
+            class="feed-media"
+            autoplay
+            muted
+            loop
+            playsinline
+            poster="{{ .stylometry_sample.StylometryImageURL }}"
+            aria-label="Видео к образцу {{ .stylometry_sample.StylometryTitle }}"
+        >
+            <source src="{{ .stylometry_sample.StylometryVideoURL }}" type="video/mp4">
+        </video>
+
+        <div class="feed-shade" aria-hidden="true"></div>
+
+        <header class="feed-header">
+            <p class="eyebrow">Стилометрия</p>
+            <h1>Определение авторства</h1>
+        </header>
+
+        <div class="like-orbit" aria-label="{{ .stylometry_sample.LikesCount }} отметок нравится">
+            <span aria-hidden="true">♥</span>
+            <small>{{ .stylometry_sample.LikesCount }}</small>
+        </div>
+
+        <section class="feed-content" aria-labelledby="stylometry-title">
+            {{ if eq .stylometry_sample.StylometryStatus "draft" }}
+                <p class="status-label">Черновик</p>
+            {{ end }}
+
+            <p class="catalog-id">{{ .stylometry_sample.StylometryAuthorName }}</p>
+            <h2 id="stylometry-title">{{ .stylometry_sample.StylometryTitle }}</h2>
+
+            <details class="description">
+                <summary>Описание</summary>
+                <p>{{ .stylometry_sample.StylometryDescr }}</p>
+            </details>
+
+            <a
+                class="next-button"
+                href="/samples/{{ .stylometry_sample.StylometryID }}?next=true"
+                aria-label="Открыть следующий образец"
+            >
+                Дальше <span aria-hidden="true">→</span>
+            </a>
+
+            <div class="metrics" aria-label="Стилометрические маркеры">
+                <div class="metric">
+                    <span>Длина предл. ≈</span>
+                    <strong>{{ .stylometry_sample.StylometryAvgSentLen }} слов</strong>
+                </div>
+                <div class="metric">
+                    <span>Союзы =</span>
+                    <strong>{{ .stylometry_sample.StylometryConjFreq }} %</strong>
+                </div>
+            </div>
+        </section>
+
+        <nav class="bottom-nav" aria-label="Основная навигация">
+            <a class="nav-item nav-item--active" href="/samples" aria-current="page">
+                <span class="nav-icon" aria-hidden="true">●</span>
+                <span>Лента</span>
+            </a>
+            <a class="nav-item" href="/samples/draft">
+                <span class="nav-icon" aria-hidden="true">＋</span>
+                <span>Добавить</span>
+            </a>
+            <a class="nav-item" href="/samples/grid">
+                <span class="nav-icon" aria-hidden="true">▦</span>
+                <span>Плитка</span>
+            </a>
+        </nav>
+    </main>
+</body>
+</html>

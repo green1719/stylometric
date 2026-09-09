@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#F7F7F7">
+    <title>Черновик {{ .stylometry_sample.StylometryTitle }} — Стилометрия</title>
+    <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css">
+</head>
+<body>
+    <main
+        class="app-shell form-page page-with-image"
+        style="--stylometry-page-image: url('{{ .stylometry_sample.StylometryImageURL }}')"
+    >
+        <div class="page-shade" aria-hidden="true"></div>
+
+        <section class="page-content">
+            <p class="status-label">Черновик</p>
+            <h1>Новый эталон</h1>
+            <p class="unsaved-badge">не сохранено</p>
+
+            <form class="draft-form" action="/samples/draft" method="get">
+                <div class="media-fields">
+                    <label class="media-field">
+                        <img src="{{ .stylometry_sample.StylometryImageURL }}" alt="Изображение {{ .stylometry_sample.StylometryTitle }}">
+                        <span class="media-field__shade" aria-hidden="true"></span>
+                        <span class="media-field__icon" aria-hidden="true">▣</span>
+                        <span>изображение</span>
+                        <input type="file" name="stylometry_image" accept="image/*">
+                    </label>
+
+                    <label class="media-field">
+                        <video muted playsinline preload="metadata" poster="{{ .stylometry_sample.StylometryImageURL }}">
+                            <source src="{{ .stylometry_sample.StylometryVideoURL }}" type="video/mp4">
+                        </video>
+                        <span class="media-field__shade" aria-hidden="true"></span>
+                        <span class="media-field__icon media-field__icon--play" aria-hidden="true">▷</span>
+                        <span>видео</span>
+                        <input type="file" name="stylometry_video" accept="video/*">
+                    </label>
+                </div>
+
+                <label class="field field--wide">
+                    <span>Название эталона</span>
+                    <input type="text" name="stylometry_title" value="{{ .stylometry_sample.StylometryTitle }}">
+                </label>
+
+                <div class="field-row">
+                    <label class="field">
+                        <span>Средняя длина предложения, слов</span>
+                        <input
+                            type="number"
+                            name="stylometry_avg_sent_len"
+                            value="{{ .stylometry_sample.StylometryAvgSentLen }}"
+                            min="0"
+                            step="0.1"
+                        >
+                    </label>
+
+                    <label class="field">
+                        <span>Частота союзов, %</span>
+                        <input
+                            type="number"
+                            name="stylometry_conj_freq"
+                            value="{{ .stylometry_sample.StylometryConjFreq }}"
+                            min="0"
+                            step="0.1"
+                        >
+                    </label>
+                </div>
+
+                <label class="field field--wide">
+                    <span>Описание</span>
+                    <textarea name="stylometry_descr" rows="5">{{ .stylometry_sample.StylometryDescr }}</textarea>
+                </label>
+            </form>
+        </section>
+
+        <nav class="bottom-nav" aria-label="Основная навигация">
+            <a class="nav-item" href="/samples">
+                <span class="nav-icon" aria-hidden="true">●</span>
+                <span>Лента</span>
+            </a>
+            <a class="nav-item nav-item--active" href="/samples/draft" aria-current="page">
+                <span class="nav-icon" aria-hidden="true">＋</span>
+                <span>Добавить</span>
+            </a>
+            <a class="nav-item" href="/samples/grid">
+                <span class="nav-icon" aria-hidden="true">▦</span>
+                <span>Плитка</span>
+            </a>
+        </nav>
+    </main>
+</body>
+</html>
