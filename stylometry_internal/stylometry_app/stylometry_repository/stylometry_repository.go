@@ -1,120 +1,174 @@
 package repository
 
 import (
-	"fmt"
-	"os"
+	"context"
+	"errors"
+	"time"
+
+	"gorm.io/gorm"
+
+	"stylometry/stylometry_internal/stylometry_app/stylometry_analysis"
+	"stylometry/stylometry_internal/stylometry_app/stylometry_model"
 )
 
-// StylometryStatus — статус образца в коллекции эталонов.
-type StylometryStatus string
+const DefaultUserID uint = 1
 
-const (
-	StylometryStatusDraft     StylometryStatus = "draft"
-	StylometryStatusPublished StylometryStatus = "published"
-	StylometryStatusDeleted   StylometryStatus = "deleted"
-)
+const DefaultImageURL = "/stylometry_static/stylometry_default_image.svg"
 
-// StylometrySample — эталонный образец текста известного автора
-// с вычисленными стилометрическими маркерами.
-type StylometrySample struct {
-	StylometryID         int
-	StylometryTitle      string
-	StylometryAuthorName string
-	StylometryAvgSentLen float64
-	StylometryConjFreq   float64
-	StylometryStatus     StylometryStatus
-	StylometryDescr      string
-	StylometryImageURL   string
-	StylometryVideoURL   string
-	StylometryLikes      []int
+const DefaultVideoURL = "/stylometry_static/stylometry_default_video.svg"
+
+// StylometrySampleRepository хранит подключение к БД.
+type StylometrySampleRepository struct {
+	DB *gorm.DB
 }
 
-func (stylometry_sample StylometrySample) LikesCount() int {
-	return len(stylometry_sample.StylometryLikes)
+// NewStylometrySampleRepository создаёт репозиторий.
+func NewStylometrySampleRepository(stylometry_db *gorm.DB) *StylometrySampleRepository {
+	return &StylometrySampleRepository{DB: stylometry_db}
 }
 
-func (stylometry_sample StylometrySample) IsVisible() bool {
-	return stylometry_sample.StylometryStatus != StylometryStatusDeleted
-}
-
-// StylometryRepository — коллекция образцов (без БД, как в задании лаб. работы №1).
-type StylometryRepository struct {
-	stylometry_samples []StylometrySample
-}
-
-func NewStylometryRepository() (*StylometryRepository, error) {
-	stylometry_public_url := stylometry_get_env("MINIO_PUBLIC_URL", "http://127.0.0.1:9000")
-	stylometry_bucket := stylometry_get_env("MINIO_BUCKET", "stylometry")
-
-	return &StylometryRepository{
-		stylometry_samples: stylometry_create_samples(stylometry_public_url, stylometry_bucket),
-	}, nil
-}
-
-func stylometry_get_env(stylometry_key, stylometry_fallback string) string {
-	if stylometry_value := os.Getenv(stylometry_key); stylometry_value != "" {
-		return stylometry_value
+// PublishedSamples возвращает только опубликованные карточки.
+func (stylometry_repository *StylometrySampleRepository) PublishedSamples() ([]model.StylometrySampleTextSample, error) {
+	var stylometry_samples []model.StylometrySampleTextSample
+	stylometry_err := stylometry_repository.DB.Preload("StylometrySampleLikes").Where("status = ?", model.StatusPublished).Order("id ASC").Find(&stylometry_samples).Error
+	if stylometry_err != nil {
+		return nil, stylometry_err
 	}
-	return stylometry_fallback
+	stylometry_repository.fillDefaultMedia(stylometry_samples)
+	return stylometry_samples, nil
 }
 
-func stylometry_media_url(stylometry_public_url, stylometry_bucket, stylometry_object_key string) string {
-	return fmt.Sprintf("%s/%s/%s", stylometry_public_url, stylometry_bucket, stylometry_object_key)
-}
-
-func stylometry_like_ids(stylometry_count int) []int {
-	stylometry_ids := make([]int, stylometry_count)
-	for stylometry_i := 0; stylometry_i < stylometry_count; stylometry_i++ {
-		stylometry_ids[stylometry_i] = stylometry_i + 1
+// SampleByID возвращает опубликованную карточку по ID.
+func (stylometry_repository *StylometrySampleRepository) SampleByID(stylometry_id uint) (model.StylometrySampleTextSample, bool, error) {
+	var stylometry_sample model.StylometrySampleTextSample
+	stylometry_err := stylometry_repository.DB.Preload("StylometrySampleLikes").Where("id = ? AND status = ?", stylometry_id, model.StatusPublished).First(&stylometry_sample).Error
+	if errors.Is(stylometry_err, gorm.ErrRecordNotFound) {
+		return model.StylometrySampleTextSample{}, false, nil
 	}
-	return stylometry_ids
+	if stylometry_err != nil {
+		return model.StylometrySampleTextSample{}, false, stylometry_err
+	}
+	stylometry_repository.fillDefaultMediaForSample(&stylometry_sample)
+	return stylometry_sample, true, nil
 }
 
-func stylometry_create_samples(stylometry_public_url, stylometry_bucket string) []StylometrySample {
-	return []StylometrySample{
-		{StylometryID: 1, StylometryTitle: "Эталон №1", StylometryAuthorName: "Л. Н. Толстой", StylometryAvgSentLen: 24.6, StylometryConjFreq: 8.4, StylometryStatus: StylometryStatusPublished, StylometryDescr: "Фрагмент из «Войны и мира»: длинные сложноподчинённые предложения, высокая частота союзов «и», «который».", StylometryImageURL: stylometry_media_url(stylometry_public_url, stylometry_bucket, "images/tolstoy.webp"), StylometryVideoURL: stylometry_media_url(stylometry_public_url, stylometry_bucket, "videos/tolstoy.mp4"), StylometryLikes: stylometry_like_ids(120)},
-		{StylometryID: 2, StylometryTitle: "Эталон №2", StylometryAuthorName: "А. П. Чехов", StylometryAvgSentLen: 11.2, StylometryConjFreq: 5.1, StylometryStatus: StylometryStatusDraft, StylometryDescr: "Черновик эталона: короткие предложения, минимум придаточных конструкций.", StylometryImageURL: stylometry_media_url(stylometry_public_url, stylometry_bucket, "images/chekhov.webp"), StylometryVideoURL: stylometry_media_url(stylometry_public_url, stylometry_bucket, "videos/chekhov.mp4"), StylometryLikes: stylometry_like_ids(14)},
-		{StylometryID: 3, StylometryTitle: "Эталон №3", StylometryAuthorName: "Ф. М. Достоевский", StylometryAvgSentLen: 19.8, StylometryConjFreq: 7.2, StylometryStatus: StylometryStatusPublished, StylometryDescr: "Насыщенный вводными конструкциями и повторами отрывок из «Преступления и наказания».", StylometryImageURL: stylometry_media_url(stylometry_public_url, stylometry_bucket, "images/dostoevsky.webp"), StylometryVideoURL: stylometry_media_url(stylometry_public_url, stylometry_bucket, "videos/dostoevsky.mp4"), StylometryLikes: stylometry_like_ids(56)},
-		{StylometryID: 4, StylometryTitle: "Эталон №4", StylometryAuthorName: "И. С. Тургенев", StylometryAvgSentLen: 16.3, StylometryConjFreq: 6.0, StylometryStatus: StylometryStatusPublished, StylometryDescr: "Описательный фрагмент с плавным ритмом и умеренной частотой союзов.", StylometryImageURL: stylometry_media_url(stylometry_public_url, stylometry_bucket, "images/turgenev.webp"), StylometryVideoURL: stylometry_media_url(stylometry_public_url, stylometry_bucket, "videos/turgenev.mp4"), StylometryLikes: stylometry_like_ids(41)},
-		{StylometryID: 5, StylometryTitle: "Эталон №5 (удалён)", StylometryAuthorName: "А. С. Пушкин", StylometryAvgSentLen: 14.0, StylometryConjFreq: 5.8, StylometryStatus: StylometryStatusDeleted, StylometryDescr: "Удалённая запись — используется для проверки того, что deleted не отображается в интерфейсе.", StylometryImageURL: stylometry_media_url(stylometry_public_url, stylometry_bucket, "images/pushkin.webp"), StylometryVideoURL: stylometry_media_url(stylometry_public_url, stylometry_bucket, "videos/pushkin.mp4"), StylometryLikes: stylometry_like_ids(9)},
+// DraftSample возвращает черновик текущего пользователя.
+func (stylometry_repository *StylometrySampleRepository) DraftSample() (model.StylometrySampleTextSample, bool, error) {
+	var stylometry_sample model.StylometrySampleTextSample
+	stylometry_err := stylometry_repository.DB.Preload("StylometrySampleLikes").Where("creator_id = ? AND status = ?", DefaultUserID, model.StatusDraft).First(&stylometry_sample).Error
+	if errors.Is(stylometry_err, gorm.ErrRecordNotFound) {
+		return model.StylometrySampleTextSample{}, false, nil
+	}
+	if stylometry_err != nil {
+		return model.StylometrySampleTextSample{}, false, stylometry_err
+	}
+	stylometry_repository.fillDefaultMediaForSample(&stylometry_sample)
+	return stylometry_sample, true, nil
+}
+
+// CreateDraft создаёт черновик при нажатии кнопки "Далее".
+func (stylometry_repository *StylometrySampleRepository) CreateDraft(stylometry_title string, stylometry_fragment_key string, stylometry_fragment_text string) (model.StylometrySampleTextSample, error) {
+	stylometry_existing, stylometry_found, stylometry_err := stylometry_repository.DraftSample()
+	if stylometry_err != nil {
+		return model.StylometrySampleTextSample{}, stylometry_err
+	}
+	if stylometry_found {
+		return stylometry_existing, nil
+	}
+
+	stylometry_fragment := analysis.ResolveFragment(stylometry_title, stylometry_fragment_key, stylometry_fragment_text)
+	stylometry_metrics := analysis.AnalyzeFragment(stylometry_fragment.StylometrySampleText)
+	stylometry_author := stylometry_fragment.StylometrySampleAuthorName
+	if stylometry_author == "" {
+		stylometry_author = "Не указан"
+	}
+
+	stylometry_sample := model.StylometrySampleTextSample{
+		StylometrySampleTitle:      stylometry_title,
+		StylometrySampleDescr:      stylometry_fragment.StylometrySampleText,
+		StylometrySampleStatus:     model.StatusDraft,
+		StylometrySampleAuthorName: stylometry_author,
+		StylometrySampleAvgSentLen: stylometry_metrics.StylometrySampleAvgSentLen,
+		StylometrySampleConjFreq:   stylometry_metrics.StylometrySampleConjFreq,
+		StylometrySampleCreatedAt:  time.Now(),
+		StylometrySampleCreatorID:  DefaultUserID,
+	}
+	stylometry_err = stylometry_repository.DB.Create(&stylometry_sample).Error
+	if stylometry_err != nil {
+		return model.StylometrySampleTextSample{}, stylometry_err
+	}
+	stylometry_repository.fillDefaultMediaForSample(&stylometry_sample)
+	return stylometry_sample, nil
+}
+
+// PublishDraft публикует черновик текущего пользователя.
+func (stylometry_repository *StylometrySampleRepository) PublishDraft(stylometry_description string, stylometry_author string, stylometry_avg_len float64, stylometry_conj_freq float64) error {
+	stylometry_now := time.Now()
+	stylometry_result := stylometry_repository.DB.Model(&model.StylometrySampleTextSample{}).Where("creator_id = ? AND status = ?", DefaultUserID, model.StatusDraft).Updates(map[string]interface{}{"short_description": stylometry_description, "author_name": stylometry_author, "avg_sentence_length": stylometry_avg_len, "conjunction_frequency": stylometry_conj_freq, "status": model.StatusPublished, "formed_at": &stylometry_now})
+	if stylometry_result.Error != nil {
+		return stylometry_result.Error
+	}
+	if stylometry_result.RowsAffected == 0 {
+		return errors.New("черновик для публикации не найден")
+	}
+	return nil
+}
+
+// DeleteSampleSQL логически удаляет карточку через SQL UPDATE без ORM-модели.
+func (stylometry_repository *StylometrySampleRepository) DeleteSampleSQL(stylometry_id uint) error {
+	stylometry_sql_db, stylometry_err := stylometry_repository.DB.DB()
+	if stylometry_err != nil {
+		return stylometry_err
+	}
+
+	stylometry_result, stylometry_err := stylometry_sql_db.ExecContext(context.Background(),
+		"UPDATE stylometry_text_samples SET status = $1 WHERE id = $2 AND status <> $3",
+		string(model.StatusDeleted), stylometry_id, string(model.StatusDeleted))
+	if stylometry_err != nil {
+		return stylometry_err
+	}
+
+	stylometry_rows_affected, stylometry_err := stylometry_result.RowsAffected()
+	if stylometry_err != nil {
+		return stylometry_err
+	}
+	if stylometry_rows_affected == 0 {
+		return errors.New("карточка для удаления не найдена")
+	}
+	return nil
+}
+
+// FilteredSamples возвращает опубликованные карточки с поиском по названию и фильтром по длине.
+func (stylometry_repository *StylometrySampleRepository) FilteredSamples(stylometry_search string, stylometry_max_avg_len *float64) ([]model.StylometrySampleTextSample, error) {
+	var stylometry_samples []model.StylometrySampleTextSample
+	stylometry_query := stylometry_repository.DB.Preload("StylometrySampleLikes").Where("status = ?", model.StatusPublished)
+	if stylometry_search != "" {
+		stylometry_query = stylometry_query.Where("lower(title) LIKE lower(?)", "%"+stylometry_search+"%")
+	}
+	if stylometry_max_avg_len != nil {
+		stylometry_query = stylometry_query.Where("avg_sentence_length <= ?", *stylometry_max_avg_len)
+	}
+	stylometry_err := stylometry_query.Order("id ASC").Find(&stylometry_samples).Error
+	if stylometry_err != nil {
+		return nil, stylometry_err
+	}
+	stylometry_repository.fillDefaultMedia(stylometry_samples)
+	return stylometry_samples, nil
+}
+
+// fillDefaultMedia ставит дефолтные ссылки, если в БД они пустые.
+func (stylometry_repository *StylometrySampleRepository) fillDefaultMedia(stylometry_samples []model.StylometrySampleTextSample) {
+	for stylometry_index := range stylometry_samples {
+		stylometry_repository.fillDefaultMediaForSample(&stylometry_samples[stylometry_index])
 	}
 }
 
-func (stylometry_repository *StylometryRepository) VisibleSamples() []StylometrySample {
-	stylometry_result := make([]StylometrySample, 0, len(stylometry_repository.stylometry_samples))
-	for _, stylometry_sample := range stylometry_repository.stylometry_samples {
-		if stylometry_sample.IsVisible() {
-			stylometry_result = append(stylometry_result, stylometry_sample)
-		}
+// fillDefaultMediaForSample ставит дефолтные ссылки в одну карточку.
+func (stylometry_repository *StylometrySampleRepository) fillDefaultMediaForSample(stylometry_sample *model.StylometrySampleTextSample) {
+	if stylometry_sample.StylometrySampleImageURL == "" {
+		stylometry_sample.StylometrySampleImageURL = DefaultImageURL
 	}
-	return stylometry_result
-}
-
-func (stylometry_repository *StylometryRepository) SampleByID(stylometry_id int) (StylometrySample, bool) {
-	for _, stylometry_sample := range stylometry_repository.VisibleSamples() {
-		if stylometry_sample.StylometryID == stylometry_id {
-			return stylometry_sample, true
-		}
+	if stylometry_sample.StylometrySampleVideoURL == "" {
+		stylometry_sample.StylometrySampleVideoURL = DefaultVideoURL
 	}
-	return StylometrySample{}, false
-}
-
-func (stylometry_repository *StylometryRepository) DraftSample() (StylometrySample, bool) {
-	for _, stylometry_sample := range stylometry_repository.stylometry_samples {
-		if stylometry_sample.StylometryStatus == StylometryStatusDraft {
-			return stylometry_sample, true
-		}
-	}
-	return StylometrySample{}, false
-}
-
-func (stylometry_repository *StylometryRepository) FilteredSamples(stylometry_max_avg_len *float64) []StylometrySample {
-	stylometry_result := make([]StylometrySample, 0)
-	for _, stylometry_sample := range stylometry_repository.VisibleSamples() {
-		if stylometry_max_avg_len != nil && stylometry_sample.StylometryAvgSentLen > *stylometry_max_avg_len {
-			continue
-		}
-		stylometry_result = append(stylometry_result, stylometry_sample)
-	}
-	return stylometry_result
 }

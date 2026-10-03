@@ -4,89 +4,166 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#F7F7F7">
-    <title>Черновик {{ .stylometry_sample.StylometryTitle }} — Стилометрия</title>
+    <title>Добавление эталона — Стилометрия</title>
     <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css">
 </head>
 <body>
     <main
         class="app-shell form-page page-with-image"
-        style="--stylometry-page-image: url('{{ .stylometry_sample.StylometryImageURL }}')"
+        style="--stylometry-page-image: url('{{ .stylometry_sample.StylometrySampleImageURL }}')"
     >
         <div class="page-shade" aria-hidden="true"></div>
 
         <section class="page-content">
-            <p class="status-label">Черновик</p>
-            <h1>Новый эталон</h1>
-            <p class="unsaved-badge">не сохранено</p>
+            {{ if .stylometry_has_draft }}
+                <p class="status-label">Черновик</p>
+                <h1>Публикация эталона</h1>
+            {{ else }}
+                <p class="status-label">Новый черновик</p>
+                <h1>Добавить эталон</h1>
+            {{ end }}
 
-            <form class="draft-form" action="/samples/draft" method="get">
-                <div class="media-fields">
-                    <label class="media-field">
-                        <img src="{{ .stylometry_sample.StylometryImageURL }}" alt="Изображение {{ .stylometry_sample.StylometryTitle }}">
-                        <span class="media-field__shade" aria-hidden="true"></span>
-                        <span class="media-field__icon" aria-hidden="true">▣</span>
-                        <span>изображение</span>
-                        <input type="file" name="stylometry_image" accept="image/*">
+            {{ if .stylometry_has_draft }}
+                <form class="draft-form" action="/samples/draft/publish" method="post">
+                    <div class="media-fields">
+                        <div class="media-field media-field--static">
+                            <img
+                                src="{{ .stylometry_sample.StylometrySampleImageURL }}"
+                                alt="Изображение {{ .stylometry_sample.StylometrySampleTitle }}"
+                                onerror="this.onerror=null;this.src='/stylometry_static/stylometry_default_image.svg';"
+                            >
+                            <span class="media-field__shade" aria-hidden="true"></span>
+                            <span class="media-field__icon" aria-hidden="true">▣</span>
+                            <span>фото по умолчанию</span>
+                        </div>
+
+                        <div class="media-field media-field--static">
+                            <video muted playsinline preload="metadata" poster="{{ .stylometry_sample.StylometrySampleImageURL }}">
+                                <source
+                                    src="{{ .stylometry_sample.StylometrySampleVideoURL }}"
+                                    type="video/mp4"
+                                    onerror="this.remove();"
+                                >
+                            </video>
+                            <span class="media-field__shade" aria-hidden="true"></span>
+                            <span class="media-field__icon media-field__icon--play" aria-hidden="true">▷</span>
+                            <span>видео по умолчанию</span>
+                        </div>
+                    </div>
+
+                    <label class="field field--wide">
+                        <span>Название эталона</span>
+                        <input type="text" value="{{ .stylometry_sample.StylometrySampleTitle }}" readonly>
                     </label>
 
-                    <label class="media-field">
-                        <video muted playsinline preload="metadata" poster="{{ .stylometry_sample.StylometryImageURL }}">
-                            <source src="{{ .stylometry_sample.StylometryVideoURL }}" type="video/mp4">
-                        </video>
-                        <span class="media-field__shade" aria-hidden="true"></span>
-                        <span class="media-field__icon media-field__icon--play" aria-hidden="true">▷</span>
-                        <span>видео</span>
-                        <input type="file" name="stylometry_video" accept="video/*">
-                    </label>
-                </div>
-
-                <label class="field field--wide">
-                    <span>Название эталона</span>
-                    <input type="text" name="stylometry_title" value="{{ .stylometry_sample.StylometryTitle }}">
-                </label>
-
-                <div class="field-row">
-                    <label class="field">
-                        <span>Средняя длина предложения, слов</span>
-                        <input
-                            type="number"
-                            name="stylometry_avg_sent_len"
-                            value="{{ .stylometry_sample.StylometryAvgSentLen }}"
-                            min="0"
-                            step="0.1"
-                        >
+                    <label class="field field--wide">
+                        <span>Автор текста</span>
+                        <input type="text" name="stylometry_author_name" value="{{ .stylometry_sample.StylometrySampleAuthorName }}">
                     </label>
 
-                    <label class="field">
-                        <span>Частота союзов, %</span>
-                        <input
-                            type="number"
-                            name="stylometry_conj_freq"
-                            value="{{ .stylometry_sample.StylometryConjFreq }}"
-                            min="0"
-                            step="0.1"
-                        >
-                    </label>
-                </div>
+                    <div class="field-row">
+                        <label class="field">
+                            <span>Средняя длина предложения, слов</span>
+                            <input
+                                type="number"
+                                name="stylometry_avg_sent_len"
+                                value="{{ .stylometry_sample.StylometrySampleAvgSentLen }}"
+                                min="0"
+                                step="0.1"
+                            >
+                        </label>
 
-                <label class="field field--wide">
-                    <span>Описание</span>
-                    <textarea name="stylometry_descr" rows="5">{{ .stylometry_sample.StylometryDescr }}</textarea>
-                </label>
-            </form>
+                        <label class="field">
+                            <span>Частота союзов, %</span>
+                            <input
+                                type="number"
+                                name="stylometry_conj_freq"
+                                value="{{ .stylometry_sample.StylometrySampleConjFreq }}"
+                                min="0"
+                                step="0.1"
+                            >
+                        </label>
+                    </div>
+
+                    <label class="field field--wide">
+                        <span>Краткая информация</span>
+                        <textarea name="stylometry_descr" rows="5">{{ .stylometry_sample.StylometrySampleDescr }}</textarea>
+                    </label>
+
+                    <button class="primary-action" type="submit">Опубликовать</button>
+                </form>
+            {{ else }}
+                <form class="draft-form" action="/samples/draft" method="post">
+                    <label class="field field--wide">
+                        <span>Название эталона</span>
+                        <input type="text" name="stylometry_title" value="" placeholder="Например: Эталон Булгакова" required>
+                    </label>
+
+                    <label class="field field--wide">
+                        <span>Фрагмент классика</span>
+                        <select name="stylometry_fragment_key">
+                            <option value="">Авто по названию</option>
+                            {{ range .stylometry_fragments }}
+                                <option value="{{ .StylometrySampleKey }}">{{ .StylometrySampleLabel }}</option>
+                            {{ end }}
+                        </select>
+                    </label>
+
+                    <label class="field field--wide">
+                        <span>Свой фрагмент</span>
+                        <textarea name="stylometry_fragment" rows="5" placeholder="Можно вставить свой фрагмент текста"></textarea>
+                    </label>
+
+                    <div class="media-fields">
+                        <label class="media-field">
+                            <img
+                                src="{{ .stylometry_sample.StylometrySampleImageURL }}"
+                                alt="Фото по умолчанию"
+                                onerror="this.onerror=null;this.src='/stylometry_static/stylometry_default_image.svg';"
+                            >
+                            <span class="media-field__shade" aria-hidden="true"></span>
+                            <span class="media-field__icon" aria-hidden="true">▣</span>
+                            <span>выбрать фото</span>
+                            <input type="file" accept="image/*">
+                        </label>
+
+                        <label class="media-field">
+                            <video muted playsinline preload="metadata" poster="{{ .stylometry_sample.StylometrySampleImageURL }}">
+                                <source
+                                    src="{{ .stylometry_sample.StylometrySampleVideoURL }}"
+                                    type="video/mp4"
+                                    onerror="this.remove();"
+                                >
+                            </video>
+                            <span class="media-field__shade" aria-hidden="true"></span>
+                            <span class="media-field__icon media-field__icon--play" aria-hidden="true">▷</span>
+                            <span>выбрать видео</span>
+                            <input type="file" accept="video/*">
+                        </label>
+                    </div>
+
+                    <button class="primary-action" type="submit">Далее</button>
+                </form>
+            {{ end }}
         </section>
 
         <nav class="bottom-nav" aria-label="Основная навигация">
-            <a class="nav-item" href="/samples">
-                <span class="nav-icon" aria-hidden="true">●</span>
+            <a class="nav-item" href="/samples/feed" aria-label="Лента">
+                <span class="nav-icon nav-icon--tab nav-icon--feed" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5.2" /></svg>
+                </span>
                 <span>Лента</span>
             </a>
-            <a class="nav-item nav-item--active" href="/samples/draft" aria-current="page">
-                <span class="nav-icon" aria-hidden="true">＋</span>
+            <a class="nav-item nav-item--active" href="/samples/draft" aria-current="page" aria-label="Добавить">
+                <span class="nav-icon nav-icon--tab" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+                </span>
                 <span>Добавить</span>
             </a>
-            <a class="nav-item" href="/samples/grid">
-                <span class="nav-icon" aria-hidden="true">▦</span>
+            <a class="nav-item" href="/samples/grid" aria-label="Плитка">
+                <span class="nav-icon nav-icon--tab nav-icon--grid" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="4" height="4" /><rect x="10" y="4" width="4" height="4" /><rect x="16" y="4" width="4" height="4" /><rect x="4" y="10" width="4" height="4" /><rect x="10" y="10" width="4" height="4" /><rect x="16" y="10" width="4" height="4" /><rect x="4" y="16" width="4" height="4" /><rect x="10" y="16" width="4" height="4" /><rect x="16" y="16" width="4" height="4" /></svg>
+                </span>
                 <span>Плитка</span>
             </a>
         </nav>

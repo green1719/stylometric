@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-label="Default stylometry video">
+  <rect width="1200" height="800" fill="#37383d"/>
+  <circle cx="600" cy="400" r="156" fill="none" stroke="#ffffff" stroke-width="26"/>
+  <path d="M560 312v176l142-88-142-88Z" fill="#ffffff"/>
+  <path d="M160 140h880M160 660h880" fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round" opacity=".7"/>
+</svg>

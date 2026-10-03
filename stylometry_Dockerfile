@@ -7,7 +7,6 @@ COPY stylometry_go.sum go.sum
 RUN go mod download
 
 COPY . .
-RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -o /stylometry ./stylometry_cmd/stylometry_stylometry
 
 # --- финальный образ ---

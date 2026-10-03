@@ -18,24 +18,53 @@
             <h1>Эталонные образцы</h1>
 
             <form class="filter-form" action="/samples/grid" method="get">
-                <label for="stylometry_avg_len" class="visually-hidden">
-                    Максимальная средняя длина предложения
+                <label class="field field--search">
+                    <span>Поиск по названию</span>
+                    <input
+                        type="search"
+                        name="stylometry_search"
+                        value="{{ .stylometry_search }}"
+                        placeholder="Например: Толстой"
+                    >
                 </label>
-                <span class="search-icon" aria-hidden="true">⌕</span>
+
+                <div class="filter-form__head">
+                    <label for="stylometry_avg_len">Длина предложения — не больше</label>
+                    <output id="stylometry_avg_len_output" for="stylometry_avg_len">
+                        {{ .stylometry_avg_len_value }} слов
+                    </output>
+                </div>
+
                 <input
                     id="stylometry_avg_len"
-                    type="text"
-                    inputmode="decimal"
+                    class="filter-form__slider"
+                    type="range"
                     name="stylometry_avg_len"
-                    value="{{ .stylometry_avg_len }}"
-                    placeholder="Длина предложения — не больше..."
+                    value="{{ .stylometry_avg_len_value }}"
+                    min="{{ .stylometry_avg_len_min }}"
+                    max="{{ .stylometry_avg_len_max }}"
+                    step="{{ .stylometry_avg_len_step }}"
+                    oninput="document.getElementById('stylometry_avg_len_output').textContent = this.value + ' слов';"
                 >
-                <button type="submit">Найти</button>
+
+                <div class="filter-form__scale" aria-hidden="true">
+                    <span>{{ .stylometry_avg_len_min }}</span>
+                    <span>{{ .stylometry_avg_len_max }}</span>
+                </div>
+
+                <button class="round-action round-action--submit" type="submit" aria-label="Найти">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M10.8 18.1a7.3 7.3 0 1 1 5.2-2.1l4 4" />
+                    </svg>
+                </button>
             </form>
 
-            {{ if .stylometry_filter_on }}
+            {{ if or .stylometry_filter_on .stylometry_search }}
                 <div class="filter-state">
-                    <span>Длина ≤ {{ .stylometry_avg_len }} слов</span>
+                    <span>
+                        {{ if .stylometry_search }}Поиск: {{ .stylometry_search }}{{ end }}
+                        {{ if .stylometry_filter_on }} Длина ≤ {{ .stylometry_avg_len }} слов{{ end }}
+                    </span>
                     <a href="/samples/grid">Сбросить</a>
                 </div>
             {{ end }}
@@ -43,48 +72,69 @@
             {{ if .has_stylometry_samples }}
                 <div class="star-grid">
                     {{ range .stylometry_samples }}
-                        <a
-                            class="star-card"
-                            href="/samples/{{ .StylometryID }}"
-                            data-video-url="{{ .StylometryVideoURL }}"
-                        >
-                            <img src="{{ .StylometryImageURL }}" alt="{{ .StylometryTitle }}">
-                            <span class="star-card__shade" aria-hidden="true"></span>
+                        <article class="star-card">
+                            <a
+                                class="star-card__link"
+                                href="/samples/feed?stylometry_id={{ .StylometrySampleID }}"
+                                data-video-url="{{ .StylometrySampleVideoURL }}"
+                            >
+                                <img
+                                    src="{{ .StylometrySampleImageURL }}"
+                                    alt="{{ .StylometrySampleTitle }}"
+                                    onerror="this.onerror=null;this.src='/stylometry_static/stylometry_default_image.svg';"
+                                >
+                                <span class="star-card__shade" aria-hidden="true"></span>
 
-                            {{ if eq .StylometryStatus "draft" }}
-                                <span class="star-card__status">черновик</span>
-                            {{ end }}
+                                <div class="star-card__body">
+                                    <p class="star-card__distance">Длина = {{ .StylometrySampleAvgSentLen }} слов</p>
+                                    <h2>{{ .StylometrySampleTitle }}</h2>
+                                    <span class="star-card__likes">
+                                        {{ len .StylometrySampleLikes }} <span aria-hidden="true">♥</span>
+                                    </span>
+                                </div>
+                            </a>
 
-                            <div class="star-card__body">
-                                <p class="star-card__distance">Длина = {{ .StylometryAvgSentLen }} слов</p>
-                                <h2>{{ .StylometryTitle }}</h2>
-                                <span class="star-card__likes">
-                                    {{ .LikesCount }} <span aria-hidden="true">♥</span>
-                                </span>
-                            </div>
-                        </a>
+                            <form class="star-card__delete" action="/samples/delete" method="post">
+                                <input type="hidden" name="stylometry_id" value="{{ .StylometrySampleID }}">
+                                <button class="round-action round-action--small" type="submit" aria-label="Удалить {{ .StylometrySampleTitle }}">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M4 7h16" />
+                                        <path d="M10 11v6" />
+                                        <path d="M14 11v6" />
+                                        <path d="M6 7l1 14h10l1-14" />
+                                        <path d="M9 7V4h6v3" />
+                                    </svg>
+                                </button>
+                            </form>
+                        </article>
                     {{ end }}
                 </div>
             {{ else }}
                 <div class="empty-state">
                     <strong>Эталоны не найдены</strong>
-                    <p>Увеличь допустимую длину предложения или сбрось фильтр.</p>
+                    <p>Измени поиск или увеличь допустимую длину предложения.</p>
                     <a href="/samples/grid">Показать все</a>
                 </div>
             {{ end }}
         </section>
 
         <nav class="bottom-nav" aria-label="Основная навигация">
-            <a class="nav-item" href="/samples">
-                <span class="nav-icon" aria-hidden="true">●</span>
+            <a class="nav-item" href="/samples/feed" aria-label="Лента">
+                <span class="nav-icon nav-icon--tab nav-icon--feed" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5.2" /></svg>
+                </span>
                 <span>Лента</span>
             </a>
-            <a class="nav-item" href="/samples/draft">
-                <span class="nav-icon" aria-hidden="true">＋</span>
+            <a class="nav-item" href="/samples/draft" aria-label="Добавить">
+                <span class="nav-icon nav-icon--tab" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+                </span>
                 <span>Добавить</span>
             </a>
-            <a class="nav-item nav-item--active" href="/samples/grid" aria-current="page">
-                <span class="nav-icon" aria-hidden="true">▦</span>
+            <a class="nav-item nav-item--active" href="/samples/grid" aria-current="page" aria-label="Плитка">
+                <span class="nav-icon nav-icon--tab nav-icon--grid" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="4" height="4" /><rect x="10" y="4" width="4" height="4" /><rect x="16" y="4" width="4" height="4" /><rect x="4" y="10" width="4" height="4" /><rect x="10" y="10" width="4" height="4" /><rect x="16" y="10" width="4" height="4" /><rect x="4" y="16" width="4" height="4" /><rect x="10" y="16" width="4" height="4" /><rect x="16" y="16" width="4" height="4" /></svg>
+                </span>
                 <span>Плитка</span>
             </a>
         </nav>

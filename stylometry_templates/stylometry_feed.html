@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#F7F7F7">
-    <title>{{ .stylometry_sample.StylometryTitle }} — Стилометрия</title>
+    <title>{{ .stylometry_sample.StylometrySampleTitle }} — Стилометрия</title>
     <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css">
 </head>
 <body>
@@ -15,10 +15,14 @@
             muted
             loop
             playsinline
-            poster="{{ .stylometry_sample.StylometryImageURL }}"
-            aria-label="Видео к образцу {{ .stylometry_sample.StylometryTitle }}"
+            poster="{{ .stylometry_sample.StylometrySampleImageURL }}"
+            aria-label="Видео к образцу {{ .stylometry_sample.StylometrySampleTitle }}"
         >
-            <source src="{{ .stylometry_sample.StylometryVideoURL }}" type="video/mp4">
+            <source
+                src="{{ .stylometry_sample.StylometrySampleVideoURL }}"
+                type="video/mp4"
+                onerror="this.remove();"
+            >
         </video>
 
         <div class="feed-shade" aria-hidden="true"></div>
@@ -28,55 +32,78 @@
             <h1>Определение авторства</h1>
         </header>
 
-        <div class="like-orbit" aria-label="{{ .stylometry_sample.LikesCount }} отметок нравится">
-            <span aria-hidden="true">♥</span>
-            <small>{{ .stylometry_sample.LikesCount }}</small>
-        </div>
-
         <section class="feed-content" aria-labelledby="stylometry-title">
-            {{ if eq .stylometry_sample.StylometryStatus "draft" }}
-                <p class="status-label">Черновик</p>
-            {{ end }}
+            <div class="feed-main">
+                <p class="catalog-id">{{ .stylometry_sample.StylometrySampleAuthorName }}</p>
+                <h2 id="stylometry-title">{{ .stylometry_sample.StylometrySampleTitle }}</h2>
 
-            <p class="catalog-id">{{ .stylometry_sample.StylometryAuthorName }}</p>
-            <h2 id="stylometry-title">{{ .stylometry_sample.StylometryTitle }}</h2>
-
-            <details class="description">
-                <summary>Описание</summary>
-                <p>{{ .stylometry_sample.StylometryDescr }}</p>
-            </details>
-
-            <a
-                class="next-button"
-                href="/samples/{{ .stylometry_sample.StylometryID }}?next=true"
-                aria-label="Открыть следующий образец"
-            >
-                Дальше <span aria-hidden="true">→</span>
-            </a>
-
-            <div class="metrics" aria-label="Стилометрические маркеры">
-                <div class="metric">
-                    <span>Длина предл. ≈</span>
-                    <strong>{{ .stylometry_sample.StylometryAvgSentLen }} слов</strong>
-                </div>
-                <div class="metric">
-                    <span>Союзы =</span>
-                    <strong>{{ .stylometry_sample.StylometryConjFreq }} %</strong>
-                </div>
+                <details class="description">
+                    <summary>
+                        <span class="description__text">{{ .stylometry_sample.StylometrySampleDescr }}</span>
+                        <span class="description__more"></span>
+                    </summary>
+                </details>
             </div>
+
+            <aside class="feed-side" aria-label="Параметры и действия">
+                <div class="metrics" aria-label="Стилометрические маркеры">
+                    <div class="metric">
+                        <span>Длина предл. ≈</span>
+                        <strong>{{ .stylometry_sample.StylometrySampleAvgSentLen }} слов</strong>
+                    </div>
+                    <div class="metric">
+                        <span>Союзы =</span>
+                        <strong>{{ .stylometry_sample.StylometrySampleConjFreq }} %</strong>
+                    </div>
+                </div>
+
+                <div class="feed-actions">
+                    <div class="feed-action feed-action--like">
+                        <span class="round-action" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 21s-7-4.5-9-9.5C1.4 7.7 3.7 5 6.9 5c1.9 0 3.2 1 4.1 2.2C11.9 6 13.2 5 15.1 5c3.2 0 5.5 2.7 3.9 6.5C17 16.5 12 21 12 21Z" />
+                            </svg>
+                        </span>
+                        <small>
+                            {{ len .stylometry_sample.StylometrySampleLikes }}
+                            <span class="visually-hidden">отметок «нравится»</span>
+                        </small>
+                    </div>
+
+                    <a
+                        class="feed-action next-button"
+                        href="/samples/grid"
+                        aria-label="Вернуться к плитке"
+                    >
+                        <span class="round-action" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M5 12h14" />
+                                <path d="m13 6 6 6-6 6" />
+                            </svg>
+                        </span>
+                        <small>Плитка</small>
+                    </a>
+                </div>
+            </aside>
         </section>
 
         <nav class="bottom-nav" aria-label="Основная навигация">
-            <a class="nav-item nav-item--active" href="/samples" aria-current="page">
-                <span class="nav-icon" aria-hidden="true">●</span>
+            <a class="nav-item nav-item--active" href="/samples/feed" aria-current="page" aria-label="Лента">
+                <span class="nav-icon nav-icon--tab nav-icon--feed" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5.2" /></svg>
+                </span>
                 <span>Лента</span>
             </a>
-            <a class="nav-item" href="/samples/draft">
-                <span class="nav-icon" aria-hidden="true">＋</span>
+            <a class="nav-item" href="/samples/draft" aria-label="Добавить">
+                <span class="nav-icon nav-icon--tab" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+                </span>
                 <span>Добавить</span>
             </a>
-            <a class="nav-item" href="/samples/grid">
-                <span class="nav-icon" aria-hidden="true">▦</span>
+            <a class="nav-item" href="/samples/grid" aria-label="Плитка">
+                <span class="nav-icon nav-icon--tab nav-icon--grid" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="4" height="4" /><rect x="10" y="4" width="4" height="4" /><rect x="16" y="4" width="4" height="4" /><rect x="4" y="10" width="4" height="4" /><rect x="10" y="10" width="4" height="4" /><rect x="16" y="10" width="4" height="4" /><rect x="4" y="16" width="4" height="4" /><rect x="10" y="16" width="4" height="4" /><rect x="16" y="16" width="4" height="4" /></svg>
+                </span>
                 <span>Плитка</span>
             </a>
         </nav>
