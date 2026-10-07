@@ -15,8 +15,9 @@
     --stylometry-color-border: #E6E6E6;
     --stylometry-color-button-border: #FFFFFF;
     --stylometry-color-shadow: rgba(0, 0, 0, 0.08);
-    --stylometry-navigation-height: 74px;
+    --stylometry-navigation-height: 108px;
     --stylometry-page-radius: 18px;
+    --stylometry-shell-width: 640px;
     --stylometry-font-heading: Georgia, "Times New Roman", serif;
     --stylometry-page-image: none;
     color-scheme: light;
@@ -70,7 +71,7 @@ a {
 
 .app-shell {
     position: relative;
-    width: min(100%, 430px);
+    width: min(100%, var(--stylometry-shell-width));
     min-height: 100svh;
     margin: 0 auto;
     overflow: hidden;
@@ -109,8 +110,8 @@ a {
 .feed-header {
     position: absolute;
     top: max(30px, env(safe-area-inset-top));
-    left: 26px;
-    max-width: 270px;
+    left: 34px;
+    max-width: 410px;
 }
 
 .feed-header .eyebrow,
@@ -118,7 +119,7 @@ a {
     margin: 0;
     color: rgba(255, 255, 255, 0.88);
     font-family: Georgia, "Times New Roman", serif;
-    font-size: clamp(1.75rem, 8vw, 2.45rem);
+    font-size: clamp(2rem, 7vw, 3rem);
     font-weight: 700;
     line-height: 0.98;
     letter-spacing: -0.035em;
@@ -127,13 +128,13 @@ a {
 
 .feed-content {
     position: absolute;
-    right: 24px;
+    right: 34px;
     bottom: calc(var(--stylometry-navigation-height) + 22px);
-    left: 24px;
+    left: 34px;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 14px;
+    gap: 34px;
 }
 
 /* Левая колонка: автор, название, короткое описание. */
@@ -145,7 +146,7 @@ a {
 /* Правая колонка: параметры и обе иконки. */
 .feed-side {
     display: flex;
-    width: 124px;
+    width: 190px;
     flex: 0 0 auto;
     align-items: flex-end;
     flex-direction: column;
@@ -169,7 +170,7 @@ a {
 }
 
 .feed-action small {
-    font-size: 0.7rem;
+    font-size: 0.76rem;
     font-weight: 700;
     text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
 }
@@ -177,9 +178,13 @@ a {
 .icon-button,
 .round-action {
     display: grid;
-    width: 54px;
-    height: 54px;
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    min-height: 64px;
     place-items: center;
+    flex: 0 0 64px;
+    aspect-ratio: 1 / 1;
     border: 2px solid var(--stylometry-color-button-border);
     border-radius: 50%;
     color: var(--stylometry-color-button-border);
@@ -207,6 +212,9 @@ a {
 .round-action--small {
     width: 38px;
     height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    flex-basis: 38px;
     border-width: 1.8px;
 }
 
@@ -254,7 +262,7 @@ a {
     margin: 0 0 10px;
     color: rgba(255, 255, 255, 0.92);
     font-family: Georgia, "Times New Roman", serif;
-    font-size: clamp(1.9rem, 8vw, 2.5rem);
+    font-size: clamp(2.15rem, 7vw, 2.9rem);
     line-height: 1;
 }
 
@@ -262,7 +270,7 @@ a {
     max-width: 100%;
     margin: 0;
     color: rgba(255, 255, 255, 0.92);
-    font-size: 0.9rem;
+    font-size: 1rem;
     line-height: 1.35;
 }
 
@@ -294,7 +302,7 @@ a {
     display: inline-block;
     margin-top: 3px;
     color: #FFFFFF;
-    font-size: 0.82rem;
+    font-size: 0.9rem;
     font-weight: 800;
 }
 
@@ -309,7 +317,7 @@ a {
 .metrics {
     display: grid;
     width: 100%;
-    gap: 4px;
+    gap: 8px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -318,8 +326,8 @@ a {
     min-height: 36px;
     align-items: center;
     justify-content: center;
-    gap: 1px;
-    padding: 4px 5px;
+    gap: 3px;
+    padding: 6px 8px;
     border: 1px solid var(--stylometry-color-border);
     border-radius: 7px;
     text-align: center;
@@ -327,7 +335,7 @@ a {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
     backdrop-filter: blur(12px);
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.64rem;
+    font-size: 0.74rem;
 }
 
 .metric span {
@@ -336,7 +344,7 @@ a {
 
 .metric strong {
     font-weight: 700;
-    font-size: 0.7rem;
+    font-size: 0.84rem;
 }
 
 .bottom-nav {
@@ -345,9 +353,9 @@ a {
     left: 50%;
     z-index: 5;
     display: grid;
-    width: min(100%, 430px);
+    width: min(100%, var(--stylometry-shell-width));
     min-height: var(--stylometry-navigation-height);
-    padding: 10px 30px max(10px, env(safe-area-inset-bottom));
+    padding: 14px 46px max(14px, env(safe-area-inset-bottom));
     border-top: 0;
     grid-template-columns: repeat(3, 1fr);
     background: var(--stylometry-color-nav);
@@ -359,6 +367,7 @@ a {
 .nav-item {
     position: relative;
     display: flex;
+    min-height: 76px;
     align-items: center;
     justify-content: center;
     flex-direction: column;
@@ -394,9 +403,13 @@ a {
 
 .nav-icon {
     display: grid;
-    width: 52px;
-    height: 52px;
+    width: 68px;
+    height: 68px;
+    min-width: 68px;
+    min-height: 68px;
     place-items: center;
+    flex: 0 0 68px;
+    aspect-ratio: 1 / 1;
     border: 2px solid var(--stylometry-color-button-border);
     border-radius: 50%;
     background: var(--stylometry-color-nav);
@@ -412,8 +425,8 @@ a {
 }
 
 .nav-icon--tab svg {
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     fill: none;
     stroke: currentColor;
     stroke-width: 2.8;
@@ -484,7 +497,7 @@ a {
 .form-page .page-content h1 {
     max-width: 100%;
     margin-top: 16px;
-    font-size: clamp(2rem, 7.6vw, 2.38rem);
+    font-size: clamp(2.35rem, 7.6vw, 3rem);
     line-height: 1.06;
 }
 
@@ -517,7 +530,7 @@ a {
 .media-field {
     position: relative;
     display: flex;
-    height: 132px;
+    height: 148px;
     align-items: center;
     justify-content: center;
     overflow: hidden;
@@ -527,7 +540,7 @@ a {
     border-radius: 12px;
     color: var(--stylometry-color-muted);
     cursor: pointer;
-    font-size: 0.75rem;
+    font-size: 0.9rem;
     transition: border-color 180ms ease, transform 180ms ease;
 }
 
@@ -560,11 +573,11 @@ a {
 
 .media-field__icon {
     color: var(--stylometry-color-accent);
-    font-size: 1.45rem;
+    font-size: 1.7rem;
 }
 
 .media-field__icon--play {
-    font-size: 1.75rem;
+    font-size: 2rem;
 }
 
 .media-field input[type="file"] {
@@ -591,7 +604,7 @@ a {
     color: var(--stylometry-color-muted);
     background: #F5F5F5;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.7rem;
+    font-size: 0.86rem;
 }
 
 .field input,
@@ -604,14 +617,14 @@ a {
     color: var(--stylometry-color-text);
     background: rgba(255, 255, 255, 0.94);
     font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 0.9rem;
+    font-size: 1.05rem;
     transition: border-color 180ms ease, background-color 180ms ease;
 }
 
 .field input,
 .field select {
-    min-height: 50px;
-    padding: 0 13px;
+    min-height: 58px;
+    padding: 0 16px;
 }
 
 .field select {
@@ -623,8 +636,8 @@ a {
 }
 
 .field textarea {
-    min-height: 110px;
-    padding: 13px;
+    min-height: 132px;
+    padding: 16px;
     line-height: 1.45;
     resize: vertical;
 }
@@ -747,12 +760,13 @@ a {
 }
 
 .primary-action {
-    min-height: 48px;
+    min-height: 62px;
     margin-top: 2px;
     border: 2px solid var(--stylometry-color-button-border);
     border-radius: 999px;
     color: var(--stylometry-color-button-border);
     background: var(--stylometry-color-nav);
+    font-size: 1.1rem;
     font-weight: 800;
     transition: transform 180ms ease, background-color 180ms ease;
 }
@@ -785,7 +799,8 @@ a {
 
 .star-card {
     position: relative;
-    min-height: 184px;
+    aspect-ratio: 4 / 5;
+    min-height: 0;
     overflow: hidden;
     border: 1px solid #E0E0E0;
     border-radius: 10px;
@@ -813,6 +828,7 @@ a {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center 30%;
     transition: transform 320ms ease;
 }
 
@@ -969,12 +985,18 @@ a {
     .round-action {
         width: 48px;
         height: 48px;
+        min-width: 48px;
+        min-height: 48px;
+        flex-basis: 48px;
         font-size: 1.35rem;
     }
 
     .nav-icon {
         width: 46px;
         height: 46px;
+        min-width: 46px;
+        min-height: 46px;
+        flex-basis: 46px;
     }
 
     .nav-icon--tab svg {
