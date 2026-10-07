@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#F7F7F7">
-    <title>Эталонные образцы — Стилометрия</title>
-    <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css">
+    <title>Корпус текстовых образцов — Стилометрия</title>
+    <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css?v=gray-blocks-2">
 </head>
 <body>
     <main
@@ -15,19 +15,9 @@
         <div class="page-shade" aria-hidden="true"></div>
 
         <section class="page-content">
-            <h1>Эталонные образцы</h1>
+            <h1>Корпус текстовых образцов</h1>
 
             <form class="filter-form" action="/samples/grid" method="get">
-                <label class="field field--search">
-                    <span>Поиск по названию</span>
-                    <input
-                        type="search"
-                        name="stylometry_search"
-                        value="{{ .stylometry_search }}"
-                        placeholder="Например: Толстой"
-                    >
-                </label>
-
                 <div class="filter-form__head">
                     <label for="stylometry_avg_len">Длина предложения — не больше</label>
                     <output id="stylometry_avg_len_output" for="stylometry_avg_len">
@@ -59,11 +49,10 @@
                 </button>
             </form>
 
-            {{ if or .stylometry_filter_on .stylometry_search }}
+            {{ if .stylometry_filter_on }}
                 <div class="filter-state">
                     <span>
-                        {{ if .stylometry_search }}Поиск: {{ .stylometry_search }}{{ end }}
-                        {{ if .stylometry_filter_on }} Длина ≤ {{ .stylometry_avg_len }} слов{{ end }}
+                        Длина ≤ {{ .stylometry_avg_len }} слов
                     </span>
                     <a href="/samples/grid">Сбросить</a>
                 </div>
@@ -80,14 +69,13 @@
                             >
                                 <img
                                     src="{{ .StylometrySampleImageURL }}"
-                                    alt="{{ .StylometrySampleTitle }}"
-                                    onerror="this.onerror=null;this.src='/stylometry_static/stylometry_default_image.svg';"
+                                    alt="{{ .StylometrySampleTextCreator }}"
                                 >
                                 <span class="star-card__shade" aria-hidden="true"></span>
 
                                 <div class="star-card__body">
-                                    <p class="star-card__distance">Длина = {{ .StylometrySampleAvgSentLen }} слов</p>
-                                    <h2>{{ .StylometrySampleTitle }}</h2>
+                                    <p class="star-card__distance">Длина = {{ .StylometrySampleAverageSentenceLength }} слов</p>
+                                    <h2>{{ .StylometrySampleTextCreator }}</h2>
                                     <span class="star-card__likes">
                                         {{ len .StylometrySampleLikes }} <span aria-hidden="true">♥</span>
                                     </span>
@@ -96,7 +84,7 @@
 
                             <form class="star-card__delete" action="/samples/delete" method="post">
                                 <input type="hidden" name="stylometry_id" value="{{ .StylometrySampleID }}">
-                                <button class="round-action round-action--small" type="submit" aria-label="Удалить {{ .StylometrySampleTitle }}">
+                                <button class="round-action round-action--small" type="submit" aria-label="Исключить из корпуса: {{ .StylometrySampleTextCreator }}" title="Логически удалить образец">
                                     <svg viewBox="0 0 24 24" aria-hidden="true">
                                         <path d="M4 7h16" />
                                         <path d="M10 11v6" />
@@ -113,7 +101,6 @@
                 <div class="empty-state">
                     <strong>Эталоны не найдены</strong>
                     <p>Измени поиск или увеличь допустимую длину предложения.</p>
-                    <a href="/samples/grid">Показать все</a>
                 </div>
             {{ end }}
         </section>

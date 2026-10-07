@@ -1,0 +1,1051 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ЛР3 — HTTP методы, HTTPS и контрольные вопросы</title>
+  <style>
+    :root {
+      --bg: #f2f2f2;
+      --panel: #ffffff;
+      --ink: #303238;
+      --muted: #6f7379;
+      --line: #d9d9d9;
+      --accent: #34363b;
+      --code: #1f2024;
+      --soft: #ececec;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, sans-serif;
+      line-height: 1.55;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 36px 22px 64px;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      color: var(--ink);
+      line-height: 1.15;
+    }
+
+    h1 {
+      font-size: 34px;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 25px;
+      margin-top: 34px;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--line);
+    }
+
+    h3 {
+      font-size: 19px;
+      margin-top: 22px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin: 8px 0 12px;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 18px;
+      max-width: 920px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      margin: 16px 0;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+    }
+
+    .note {
+      background: var(--soft);
+      border-left: 5px solid var(--accent);
+      padding: 12px 14px;
+      border-radius: 6px;
+      margin: 14px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      margin: 12px 0 22px;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    code {
+      font-family: Menlo, Consolas, monospace;
+      font-size: 0.95em;
+    }
+
+    pre {
+      margin: 10px 0 14px;
+      padding: 14px;
+      overflow-x: auto;
+      background: var(--code);
+      color: #f4f4f4;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .method {
+      display: inline-block;
+      min-width: 58px;
+      text-align: center;
+      color: #fff;
+      background: var(--accent);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .url {
+      word-break: break-all;
+    }
+
+    ol, ul {
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>ЛР3 — методы веб-сервиса StylometrySample</h1>
+  <p class="lead">
+    Тема проекта: веб-сервис для карточек текстовых образцов и стилометрических признаков.
+    Бэкенд написан на Go, роутинг выполнен через Gin, работа с БД — через GORM, удаление карточки — SQL UPDATE через курсор.
+  </p>
+
+  <div class="note">
+    Локальный адрес для проверки в Postman: <code>http://127.0.0.1:8080</code>.
+    Все API-методы начинаются с <code>/api</code>.
+  </div>
+
+  <h2>1. Десять HTTP-методов ЛР3</h2>
+  <p>
+    В проекте зарегистрировано 10 API-методов. Ниже указаны URL, тело запроса и пример ответа.
+    Для ленты переход к следующей карточке выполняется тем же методом <code>GET /api/samples/feed</code>,
+    но с query-параметрами <code>stylometry_id</code> и <code>next=true</code>.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>№</th>
+        <th>Метод и URL</th>
+        <th>Что делает</th>
+        <th>Тело запроса</th>
+        <th>Код из лабы</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td><span class="method">GET</span> <span class="url">/api/samples?stylometry_avg_len=12</span></td>
+        <td>Возвращает список опубликованных карточек. Фильтр ограничивает среднюю длину предложения.</td>
+        <td>Тело не передаётся.</td>
+        <td><code>stylometry_api.GET("/samples", APIGetStylometrySampleList)</code></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td><span class="method">GET</span> <span class="url">/api/samples/feed</span></td>
+        <td>Возвращает одну первую опубликованную карточку для ленты.</td>
+        <td>Тело не передаётся.</td>
+        <td><code>stylometry_api.GET("/samples/feed", APIGetStylometrySampleFeed)</code></td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td><span class="method">GET</span> <span class="url">/api/samples/draft</span></td>
+        <td>Возвращает черновик текущего пользователя. ID в URL не нужен.</td>
+        <td>Тело не передаётся.</td>
+        <td><code>stylometry_api.GET("/samples/draft", APIGetStylometrySampleDraft)</code></td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td><span class="method">POST</span> <span class="url">/api/samples</span></td>
+        <td>Создаёт или обновляет черновик, загружает изображение и видео в MinIO.</td>
+        <td><code>multipart/form-data</code>, не обычный JSON.</td>
+        <td><code>stylometry_api.POST("/samples", APIPostStylometrySampleDraft)</code></td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td><span class="method">PUT</span> <span class="url">/api/samples/draft/publish</span></td>
+        <td>Публикует черновик текущего пользователя и рассчитывает признаки стилометрии.</td>
+        <td>Тело не передаётся.</td>
+        <td><code>stylometry_api.PUT("/samples/draft/publish", APIPutStylometrySamplePublishDraft)</code></td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td><span class="method">DELETE</span> <span class="url">/api/samples/24</span></td>
+        <td>Логически удаляет карточку текущего пользователя: статус меняется на <code>deleted</code>.</td>
+        <td>Тело не передаётся.</td>
+        <td><code>stylometry_api.DELETE("/samples/:id", APIDeleteStylometrySample)</code></td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td><span class="method">POST</span> <span class="url">/api/samples/1/like</span></td>
+        <td>Ставит или снимает лайк текущего пользователя.</td>
+        <td><code>{ "stylometry_like": 1 }</code> или <code>{ "stylometry_like": 0 }</code></td>
+        <td><code>stylometry_api.POST("/samples/:id/like", APIPostStylometrySampleLike)</code></td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td><span class="method">POST</span> <span class="url">/api/users</span></td>
+        <td>Регистрирует нового пользователя.</td>
+        <td><code>{ "stylometry_sample_name": "testuser", "stylometry_sample_password": "12345" }</code></td>
+        <td><code>stylometry_api.POST("/users", APIPostStylometryUserRegister)</code></td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td><span class="method">POST</span> <span class="url">/api/auth/login</span></td>
+        <td>Заглушка аутентификации для следующей лабораторной.</td>
+        <td>Можно без тела.</td>
+        <td><code>stylometry_api.POST("/auth/login", APIPostStylometryAuthLogin)</code></td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td><span class="method">POST</span> <span class="url">/api/auth/logout</span></td>
+        <td>Заглушка деавторизации для следующей лабораторной.</td>
+        <td>Можно без тела.</td>
+        <td><code>stylometry_api.POST("/auth/logout", APIPostStylometryAuthLogout)</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>2. Как методы реализованы в моём коде</h2>
+  <p>
+    Все методы сначала регистрируются в файле <code>stylometry_internal/stylometry_api/stylometry_server.go</code>.
+    Дальше запрос попадает в handler из файла <code>stylometry_api_handler.go</code>.
+    Handler читает параметры запроса, проверяет ошибки и вызывает repository.
+    Repository уже работает с БД через GORM или через SQL-курсор.
+  </p>
+
+  <h3>Регистрация API-роутов</h3>
+  <pre><code>stylometry_api := stylometry_r.Group("/api")
+{
+  stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetStylometrySampleList)
+  stylometry_api.GET("/samples/feed", stylometry_stylometryHandler.APIGetStylometrySampleFeed)
+  stylometry_api.GET("/samples/draft", stylometry_stylometryHandler.APIGetStylometrySampleDraft)
+  stylometry_api.POST("/samples", stylometry_stylometryHandler.APIPostStylometrySampleDraft)
+  stylometry_api.PUT("/samples/draft/publish", stylometry_stylometryHandler.APIPutStylometrySamplePublishDraft)
+  stylometry_api.DELETE("/samples/:id", stylometry_stylometryHandler.APIDeleteStylometrySample)
+  stylometry_api.POST("/samples/:id/like", stylometry_stylometryHandler.APIPostStylometrySampleLike)
+  stylometry_api.POST("/users", stylometry_stylometryHandler.APIPostStylometryUserRegister)
+  stylometry_api.POST("/auth/login", stylometry_stylometryHandler.APIPostStylometryAuthLogin)
+  stylometry_api.POST("/auth/logout", stylometry_stylometryHandler.APIPostStylometryAuthLogout)
+}</code></pre>
+
+  <div class="card">
+    <h3>1. GET /api/samples — список опубликованных карточек с фильтром</h3>
+    <p>
+      Handler берёт query-параметр <code>stylometry_avg_len</code>, проверяет, что число находится в диапазоне 0–30,
+      и передаёт значение в repository.
+    </p>
+    <pre><code>stylometry_raw_filter := strings.TrimSpace(stylometry_ctx.Query("stylometry_avg_len"))
+
+var stylometry_max_avg_len *float64
+if stylometry_raw_filter != "" {
+  stylometry_num, stylometry_err := stylometryParseFloat(stylometry_raw_filter)
+  if stylometry_err != nil || stylometry_num &lt; stylometryAvgLenMin || stylometry_num &gt; stylometryAvgLenMax {
+    stylometry_ctx.JSON(http.StatusBadRequest, gin.H{
+      "error": "stylometry_avg_len должен быть числом от 0 до 30",
+    })
+    return
+  }
+  stylometry_max_avg_len = &amp;stylometry_num
+}
+
+stylometry_samples, stylometry_err := stylometry_h.Repository.FilteredSamples(stylometry_max_avg_len)</code></pre>
+    <p>
+      В repository фильтрация выполняется через ORM-запрос GORM. Сначала берутся только опубликованные записи,
+      потом добавляется условие по средней длине предложения.
+    </p>
+    <pre><code>stylometry_query := stylometry_repository.DB.
+  Preload("StylometrySampleLikes").
+  Where("\"StylometrySampleStatus\" = ?", model.StatusPublished)
+
+if stylometry_max_avg_len != nil {
+  stylometry_query = stylometry_query.Where(
+    "\"StylometrySampleAverageSentenceLength\" &lt;= ?",
+    *stylometry_max_avg_len,
+  )
+}
+
+stylometry_err := stylometry_query.
+  Order("\"StylometrySampleID\" ASC").
+  Find(&amp;stylometry_samples).Error</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. GET /api/samples/feed — лента</h3>
+    <p>
+      Handler читает <code>stylometry_id</code> и <code>next=true</code>. Если id не передан, repository вернёт первую опубликованную карточку.
+      Если передан id и <code>next=true</code>, repository ищет следующую карточку с большим id.
+    </p>
+    <pre><code>stylometry_raw_id := strings.TrimSpace(stylometry_ctx.Query("stylometry_id"))
+stylometry_next := strings.EqualFold(strings.TrimSpace(stylometry_ctx.Query("next")), "true")
+
+stylometry_sample, stylometry_ok, stylometry_err :=
+  stylometry_h.Repository.FeedSample(stylometry_sample_id, stylometry_next)</code></pre>
+    <p>
+      Важная часть реализации: БД возвращает одну строку через <code>First</code>. Если следующей карточки нет,
+      выполняется второй запрос, который возвращает первую карточку, поэтому лента зациклена.
+    </p>
+    <pre><code>if stylometry_id != nil &amp;&amp; stylometry_next {
+  stylometry_query = stylometry_query.Where("\"StylometrySampleID\" &gt; ?", *stylometry_id)
+}
+
+stylometry_err := stylometry_query.
+  Order("\"StylometrySampleID\" ASC").
+  First(&amp;stylometry_sample).Error
+
+if errors.Is(stylometry_err, gorm.ErrRecordNotFound) &amp;&amp; stylometry_id != nil &amp;&amp; stylometry_next {
+  stylometry_err = stylometry_repository.DB.
+    Preload("StylometrySampleLikes").
+    Where("\"StylometrySampleStatus\" = ?", model.StatusPublished).
+    Order("\"StylometrySampleID\" ASC").
+    First(&amp;stylometry_sample).Error
+}</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. GET /api/samples/draft — черновик текущего пользователя</h3>
+    <p>
+      Handler сам не принимает id черновика. Он вызывает <code>DraftSample()</code>, а repository ищет черновик по текущему пользователю
+      и статусу <code>draft</code>.
+    </p>
+    <pre><code>stylometry_draft, stylometry_has_draft, stylometry_err := stylometry_h.Repository.DraftSample()
+
+if !stylometry_has_draft {
+  stylometry_ctx.JSON(http.StatusOK, gin.H{
+    "has_draft": false,
+    "draft":     nil,
+  })
+  return
+}</code></pre>
+    <pre><code>stylometry_err := stylometry_repository.DB.
+  Preload("StylometrySampleLikes").
+  Where("\"StylometrySampleCreatorID\" = ? AND \"StylometrySampleStatus\" = ?",
+    stylometryCurrentUserID(),
+    model.StatusDraft,
+  ).
+  First(&amp;stylometry_sample).Error</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>4. POST /api/samples — создание/обновление черновика и MinIO</h3>
+    <p>
+      Этот метод принимает <code>multipart/form-data</code>, потому что кроме текста передаются два файла:
+      изображение и видео. Handler читает поля формы, достаёт файлы, загружает их в MinIO и передаёт полученные URL в repository.
+    </p>
+    <pre><code>stylometry_text_creator := strings.TrimSpace(stylometry_ctx.PostForm("stylometry_text_creator"))
+stylometry_description := strings.TrimSpace(stylometry_ctx.PostForm("stylometry_sample_descr"))
+
+stylometry_image_file, stylometry_err :=
+  stylometryAPIFormFile(stylometry_ctx, "stylometry_image", "image", "stylometry_sample_image")
+
+stylometry_video_file, stylometry_err :=
+  stylometryAPIFormFile(stylometry_ctx, "stylometry_video", "video", "stylometry_sample_video")</code></pre>
+    <pre><code>stylometry_image_url, stylometry_err := media.UploadFile(
+  stylometry_ctx.Request.Context(),
+  stylometry_image_file,
+  "stylometry_images",
+)
+
+stylometry_video_url, stylometry_err := media.UploadFile(
+  stylometry_ctx.Request.Context(),
+  stylometry_video_file,
+  "stylometry_videos",
+)</code></pre>
+    <p>
+      Repository сначала проверяет, есть ли уже черновик у пользователя. Если есть — обновляет его через GORM <code>Updates</code>.
+      Если нет — создаёт новую запись через GORM <code>Create</code>.
+    </p>
+    <pre><code>stylometry_existing, stylometry_found, stylometry_err := stylometry_repository.DraftSample()
+stylometry_metrics := analysis.AnalyzeText(stylometry_text)
+
+if stylometry_found {
+  stylometry_updates := map[string]interface{}{
+    "StylometrySampleTextCreator":           stylometry_text_creator,
+    "StylometrySampleShortDescription":      stylometry_text,
+    "StylometrySampleImageURL":              stylometry_image_url,
+    "StylometrySampleVideoURL":              stylometry_video_url,
+    "StylometrySampleAverageSentenceLength": stylometry_metrics.StylometrySampleAverageSentenceLength,
+    "StylometrySampleConjunctionFrequency":  stylometry_metrics.StylometrySampleConjunctionFrequency,
+  }
+  stylometry_err = stylometry_repository.DB.Model(&amp;model.StylometrySampleTextSample{}).
+    Where("\"StylometrySampleID\" = ?", stylometry_existing.StylometrySampleID).
+    Updates(stylometry_updates).Error
+}</code></pre>
+    <pre><code>stylometry_sample := model.StylometrySampleTextSample{
+  StylometrySampleTextCreator:           stylometry_text_creator,
+  StylometrySampleDescr:                 stylometry_text,
+  StylometrySampleStatus:                model.StatusDraft,
+  StylometrySampleImageURL:              stylometry_image_url,
+  StylometrySampleVideoURL:              stylometry_video_url,
+  StylometrySampleAverageSentenceLength: stylometry_metrics.StylometrySampleAverageSentenceLength,
+  StylometrySampleConjunctionFrequency:  stylometry_metrics.StylometrySampleConjunctionFrequency,
+  StylometrySampleCreatorID:             stylometryCurrentUserID(),
+}
+stylometry_err = stylometry_repository.DB.Create(&amp;stylometry_sample).Error</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>5. PUT /api/samples/draft/publish — публикация черновика</h3>
+    <p>
+      Handler сначала получает черновик текущего пользователя. Потом вызывает анализ текста и передаёт рассчитанные значения
+      в repository.
+    </p>
+    <pre><code>stylometry_draft, stylometry_has_draft, stylometry_err := stylometry_h.Repository.DraftSample()
+stylometry_metrics := analysis.AnalyzeText(stylometry_draft.StylometrySampleDescr)
+
+stylometry_err = stylometry_h.Repository.PublishDraft(
+  stylometry_draft.StylometrySampleDescr,
+  stylometry_metrics.StylometrySampleAverageSentenceLength,
+  stylometry_metrics.StylometrySampleConjunctionFrequency,
+)</code></pre>
+    <p>
+      Repository меняет статус только у черновика текущего пользователя. Здесь же заполняется
+      <code>StylometrySampleUpdatedAt</code>.
+    </p>
+    <pre><code>stylometry_updated_at := time.Now()
+stylometry_result := stylometry_repository.DB.
+  Model(&amp;model.StylometrySampleTextSample{}).
+  Where("\"StylometrySampleCreatorID\" = ? AND \"StylometrySampleStatus\" = ?",
+    stylometryCurrentUserID(),
+    model.StatusDraft,
+  ).
+  Updates(map[string]interface{}{
+    "StylometrySampleShortDescription":      stylometry_description,
+    "StylometrySampleAverageSentenceLength": stylometry_avg_len,
+    "StylometrySampleConjunctionFrequency":  stylometry_conj_freq,
+    "StylometrySampleStatus":                model.StatusPublished,
+    "StylometrySampleUpdatedAt":             &amp;stylometry_updated_at,
+  })</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>6. DELETE /api/samples/:id — логическое удаление через SQL-курсор</h3>
+    <p>
+      Handler берёт id из URL и вызывает repository. Здесь специально используется не ORM-удаление, а SQL-запрос
+      <code>UPDATE ... RETURNING</code> через <code>QueryContext</code>.
+    </p>
+    <pre><code>stylometry_id, stylometry_err :=
+  strconv.ParseUint(strings.TrimSpace(stylometry_ctx.Param("id")), 10, 64)
+
+stylometry_err = stylometry_h.Repository.DeleteSampleSQL(uint(stylometry_id))</code></pre>
+    <pre><code>stylometry_sql_db, stylometry_err := stylometry_repository.DB.DB()
+
+stylometry_rows, stylometry_err := stylometry_sql_db.QueryContext(
+  context.Background(),
+  "UPDATE \"StylometrySampleTextSamples\" SET \"StylometrySampleStatus\" = $1
+   WHERE \"StylometrySampleID\" = $2
+     AND \"StylometrySampleStatus\" &lt;&gt; $3
+     AND \"StylometrySampleCreatorID\" = $4
+   RETURNING \"StylometrySampleID\"",
+  string(model.StatusDeleted),
+  stylometry_id,
+  string(model.StatusDeleted),
+  stylometryCurrentUserID(),
+)</code></pre>
+    <p>
+      Курсор здесь — это <code>stylometry_rows</code>. По нему код проверяет, вернул ли SQL-запрос удалённую строку.
+      Если строка есть, удаление успешно. Если строки нет, значит карточка не найдена, уже удалена или принадлежит другому пользователю.
+    </p>
+    <pre><code>if stylometry_rows.Next() {
+  var stylometry_deleted_id uint
+  if stylometry_err := stylometry_rows.Scan(&amp;stylometry_deleted_id); stylometry_err != nil {
+    return stylometry_err
+  }
+  return stylometry_rows.Err()
+}</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>7. POST /api/samples/:id/like — лайк</h3>
+    <p>
+      Handler читает id карточки из URL и тело запроса. Значение может прийти как <code>stylometry_like</code> или как <code>like</code>.
+      Допускаются только значения 0 и 1.
+    </p>
+    <pre><code>type stylometryAPILikeRequest struct {
+  StylometryLike *int `form:"stylometry_like" json:"stylometry_like"`
+  Like           *int `form:"like" json:"like"`
+}</code></pre>
+    <pre><code>if stylometry_like_value != 0 &amp;&amp; stylometry_like_value != 1 {
+  stylometry_ctx.JSON(http.StatusBadRequest, gin.H{
+    "error": "stylometry_like должен быть 0 или 1",
+  })
+  return
+}
+
+stylometry_ok, stylometry_err :=
+  stylometry_h.Repository.SetLike(uint(stylometry_id), stylometry_like_value)</code></pre>
+    <p>
+      В repository сначала проверяется, что карточка существует и опубликована. Потом создаётся запись в таблице лайков
+      или удаляется существующая запись.
+    </p>
+    <pre><code>stylometry_err := stylometry_repository.DB.Model(&amp;model.StylometrySampleTextSample{}).
+  Where("\"StylometrySampleID\" = ? AND \"StylometrySampleStatus\" = ?",
+    stylometry_id,
+    model.StatusPublished,
+  ).
+  Count(&amp;stylometry_count).Error</code></pre>
+    <pre><code>stylometry_like := model.StylometrySampleLike{
+  StylometrySampleUserID:       stylometryCurrentUserID(),
+  StylometrySampleTextSampleID: stylometry_id,
+}
+
+if stylometry_like_value == 1 {
+  stylometry_err = stylometry_repository.DB.
+    Clauses(clause.OnConflict{DoNothing: true}).
+    Create(&amp;stylometry_like).Error
+  return true, stylometry_err
+}</code></pre>
+    <pre><code>stylometry_err = stylometry_repository.DB.
+  Where("\"StylometrySampleUserID\" = ? AND \"StylometrySampleTextSampleID\" = ?",
+    stylometryCurrentUserID(),
+    stylometry_id,
+  ).
+  Delete(&amp;model.StylometrySampleLike{}).Error</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>8. POST /api/users — регистрация пользователя</h3>
+    <p>
+      Handler привязывает JSON или form-data к структуре <code>stylometryAPIUserRequest</code>.
+      Если пароль не передан, подставляется значение по умолчанию.
+    </p>
+    <pre><code>type stylometryAPIUserRequest struct {
+  StylometrySampleName     string `form:"stylometry_sample_name" json:"stylometry_sample_name"`
+  StylometrySamplePassword string `form:"stylometry_sample_password" json:"stylometry_sample_password"`
+}</code></pre>
+    <pre><code>stylometry_name := strings.TrimSpace(stylometry_request.StylometrySampleName)
+stylometry_password := strings.TrimSpace(stylometry_request.StylometrySamplePassword)
+
+if stylometry_password == "" {
+  stylometry_password = "stylometry123"
+}
+
+stylometry_user, stylometry_err :=
+  stylometry_h.Repository.RegisterUser(stylometry_name, stylometry_password)</code></pre>
+    <p>В repository пользователь создаётся через GORM <code>Create</code>.</p>
+    <pre><code>stylometry_user := model.StylometrySampleUser{
+  StylometrySampleName:     stylometry_name,
+  StylometrySamplePassword: stylometry_password,
+}
+stylometry_err := stylometry_repository.DB.Create(&amp;stylometry_user).Error</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>9–10. POST /api/auth/login и POST /api/auth/logout — заглушки</h3>
+    <p>
+      Эти методы пока не выполняют настоящую авторизацию. Они нужны для структуры API и следующей лабораторной.
+      Сейчас они просто возвращают JSON-ответ.
+    </p>
+    <pre><code>func (stylometry_h *StylometrySampleHandler) APIPostStylometryAuthLogin(stylometry_ctx *gin.Context) {
+  stylometry_ctx.JSON(http.StatusOK, gin.H{
+    "authenticated":           true,
+    "stylometry_current_user": stylometryAPIUserID(),
+    "stylometry_auth_comment": "заглушка для лабораторной работы №4",
+  })
+}
+
+func (stylometry_h *StylometrySampleHandler) APIPostStylometryAuthLogout(stylometry_ctx *gin.Context) {
+  stylometry_ctx.JSON(http.StatusOK, gin.H{
+    "deauthenticated":         true,
+    "stylometry_auth_comment": "заглушка для лабораторной работы №4",
+  })
+}</code></pre>
+  </div>
+
+  <h3>Фиксированный текущий пользователь</h3>
+  <p>
+    Во всех методах текущий пользователь берётся не из клиента, а через функцию-singleton.
+    Это соответствует условию лабораторной: авторизация пока не реализуется, пользователь зафиксирован.
+  </p>
+  <pre><code>const stylometrySampleFixedUserID uint = 1
+
+func CurrentUser() *StylometrySampleCurrentUser {
+  stylometrySampleCurrentUserOnce.Do(func() {
+    stylometrySampleCurrentUser = &amp;StylometrySampleCurrentUser{
+      StylometrySampleID: stylometrySampleFixedUserID,
+    }
+  })
+
+  return stylometrySampleCurrentUser
+}</code></pre>
+
+  <h3>Сериализация ответа</h3>
+  <p>
+    После чтения модели из БД handler отдаёт не саму модель GORM, а DTO из serializer.
+    Поэтому клиент получает только нужные поля, а внутренние связи и статус не выводятся напрямую.
+  </p>
+  <pre><code>return StylometrySampleResponse{
+  StylometrySampleID:                    stylometry_sample.StylometrySampleID,
+  StylometrySampleTextCreator:           stylometry_sample.StylometrySampleTextCreator,
+  StylometrySampleDescr:                 stylometry_sample.StylometrySampleDescr,
+  StylometrySampleImageURL:              stylometry_sample.StylometrySampleImageURL,
+  StylometrySampleVideoURL:              stylometry_sample.StylometrySampleVideoURL,
+  StylometrySampleAverageSentenceLength: stylometry_sample.StylometrySampleAverageSentenceLength,
+  StylometrySampleConjunctionFrequency:  stylometry_sample.StylometrySampleConjunctionFrequency,
+  StylometrySampleLikesCount:            len(stylometry_sample.StylometrySampleLikes),
+  StylometrySampleIsCurrentUserCreator:  stylometry_is_creator,
+}</code></pre>
+
+  <h2>3. Примеры запросов и JSON</h2>
+
+  <div class="card">
+    <h3>1. Получение списка карточек с фильтром</h3>
+    <p><strong>URL:</strong> <code>GET http://127.0.0.1:8080/api/samples?stylometry_avg_len=12</code></p>
+    <p>Сервер отдаёт только опубликованные карточки. Удалённые записи на клиент не передаются.</p>
+    <pre><code>{
+  "items": [
+    {
+      "stylometry_sample_id": 1,
+      "stylometry_sample_text_creator": "Л.Н. Толстой",
+      "stylometry_sample_descr": "Текстовый отрывок для анализа.",
+      "stylometry_sample_image_url": "http://127.0.0.1:9000/stylometry/stylometry_images/stylometry_upload_20261007_120000_000000000.jpg",
+      "stylometry_sample_video_url": "http://127.0.0.1:9000/stylometry/stylometry_videos/stylometry_upload_20261007_120000_000000000.mp4",
+      "stylometry_sample_average_sentence_length": 10.5,
+      "stylometry_sample_conjunction_frequency": 4.2,
+      "stylometry_sample_likes_count": 1,
+      "stylometry_sample_is_current_user_creator": 1,
+      "stylometry_sample_created_at": "2026-10-07T12:00:00Z",
+      "stylometry_sample_updated_at": "2026-10-07T12:05:00Z"
+    }
+  ]
+}</code></pre>
+    <p><strong>Код фильтрации:</strong></p>
+    <pre><code>stylometry_query := stylometry_repository.DB.
+  Preload("StylometrySampleLikes").
+  Where("\"StylometrySampleStatus\" = ?", model.StatusPublished)
+
+if stylometry_max_avg_len != nil {
+  stylometry_query = stylometry_query.Where(
+    "\"StylometrySampleAverageSentenceLength\" &lt;= ?",
+    *stylometry_max_avg_len,
+  )
+}</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Получение первой карточки ленты</h3>
+    <p><strong>URL:</strong> <code>GET http://127.0.0.1:8080/api/samples/feed</code></p>
+    <p>Метод возвращает сразу одну строку из БД через <code>First</code>, а не выбирает массив и не фильтрует его на клиенте.</p>
+    <pre><code>{
+  "stylometry_sample_id": 1,
+  "stylometry_sample_text_creator": "Л.Н. Толстой",
+  "stylometry_sample_descr": "Текстовый отрывок для анализа.",
+  "stylometry_sample_likes_count": 1,
+  "stylometry_sample_is_current_user_creator": 1
+}</code></pre>
+    <p><strong>Код ленты:</strong></p>
+    <pre><code>stylometry_err := stylometry_query.
+  Order("\"StylometrySampleID\" ASC").
+  First(&amp;stylometry_sample).Error</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Получение следующей карточки ленты</h3>
+    <p><strong>URL:</strong> <code>GET http://127.0.0.1:8080/api/samples/feed?stylometry_id=1&amp;next=true</code></p>
+    <p>Если следующей опубликованной карточки нет, сервер возвращает первую опубликованную карточку, то есть лента работает циклически.</p>
+    <pre><code>if stylometry_id != nil &amp;&amp; stylometry_next {
+  stylometry_query = stylometry_query.Where(
+    "\"StylometrySampleID\" &gt; ?",
+    *stylometry_id,
+  )
+}
+
+if errors.Is(stylometry_err, gorm.ErrRecordNotFound) &amp;&amp; stylometry_id != nil &amp;&amp; stylometry_next {
+  stylometry_err = stylometry_repository.DB.
+    Preload("StylometrySampleLikes").
+    Where("\"StylometrySampleStatus\" = ?", model.StatusPublished).
+    Order("\"StylometrySampleID\" ASC").
+    First(&amp;stylometry_sample).Error
+}</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>4. Получение черновика</h3>
+    <p><strong>URL:</strong> <code>GET http://127.0.0.1:8080/api/samples/draft</code></p>
+    <pre><code>{
+  "has_draft": true,
+  "draft": {
+    "stylometry_sample_id": 24,
+    "stylometry_sample_text_creator": "Ф.М. Достоевский",
+    "stylometry_sample_descr": "Текстовый отрывок черновика."
+  }
+}</code></pre>
+    <p><strong>Код:</strong></p>
+    <pre><code>stylometry_err := stylometry_repository.DB.
+  Preload("StylometrySampleLikes").
+  Where("\"StylometrySampleCreatorID\" = ? AND \"StylometrySampleStatus\" = ?",
+    stylometryCurrentUserID(),
+    model.StatusDraft,
+  ).
+  First(&amp;stylometry_sample).Error</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>5. Создание черновика с картинкой и видео</h3>
+    <p><strong>URL:</strong> <code>POST http://127.0.0.1:8080/api/samples</code></p>
+    <p>В Postman выбрать <code>Body → form-data</code>. Текстовые поля и файлы:</p>
+    <pre><code>stylometry_text_creator = Ф.М. Достоевский
+stylometry_sample_descr = Текстовый отрывок для анализа стилометрии.
+stylometry_image = файл .jpg или .png
+stylometry_video = файл .mp4 или .mov</code></pre>
+    <p><strong>Ответ:</strong></p>
+    <pre><code>{
+  "draft": {
+    "stylometry_sample_id": 24,
+    "stylometry_sample_text_creator": "Ф.М. Достоевский",
+    "stylometry_sample_image_url": "http://127.0.0.1:9000/stylometry/stylometry_images/stylometry_upload_20261007_120000_000000000.jpg",
+    "stylometry_sample_video_url": "http://127.0.0.1:9000/stylometry/stylometry_videos/stylometry_upload_20261007_120001_000000000.mp4"
+  }
+}</code></pre>
+    <p><strong>Код загрузки файлов:</strong></p>
+    <pre><code>stylometry_image_url, stylometry_err := media.UploadFile(
+  stylometry_ctx.Request.Context(),
+  stylometry_image_file,
+  "stylometry_images",
+)
+
+stylometry_video_url, stylometry_err := media.UploadFile(
+  stylometry_ctx.Request.Context(),
+  stylometry_video_file,
+  "stylometry_videos",
+)</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>6. Публикация черновика</h3>
+    <p><strong>URL:</strong> <code>PUT http://127.0.0.1:8080/api/samples/draft/publish</code></p>
+    <p>Тело запроса не нужно. Статус, дата обновления и стилометрические признаки рассчитываются на сервере.</p>
+    <pre><code>{
+  "published": true,
+  "sample": {
+    "stylometry_sample_id": 24,
+    "stylometry_sample_average_sentence_length": 9.8,
+    "stylometry_sample_conjunction_frequency": 3.6,
+    "stylometry_sample_updated_at": "2026-10-07T12:10:00Z"
+  }
+}</code></pre>
+    <p><strong>Код публикации:</strong></p>
+    <pre><code>stylometry_metrics := analysis.AnalyzeText(stylometry_draft.StylometrySampleDescr)
+stylometry_err = stylometry_h.Repository.PublishDraft(
+  stylometry_draft.StylometrySampleDescr,
+  stylometry_metrics.StylometrySampleAverageSentenceLength,
+  stylometry_metrics.StylometrySampleConjunctionFrequency,
+)</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>7. Логическое удаление карточки</h3>
+    <p><strong>URL:</strong> <code>DELETE http://127.0.0.1:8080/api/samples/24</code></p>
+    <p>Карточка не удаляется физически. Через SQL UPDATE статус меняется на <code>deleted</code>.</p>
+    <pre><code>{
+  "deleted": true
+}</code></pre>
+    <p><strong>Код SQL-удаления через курсор:</strong></p>
+    <pre><code>stylometry_rows, stylometry_err := stylometry_sql_db.QueryContext(
+  context.Background(),
+  "UPDATE \"StylometrySampleTextSamples\" SET \"StylometrySampleStatus\" = $1
+   WHERE \"StylometrySampleID\" = $2
+     AND \"StylometrySampleStatus\" &lt;&gt; $3
+     AND \"StylometrySampleCreatorID\" = $4
+   RETURNING \"StylometrySampleID\"",
+  string(model.StatusDeleted),
+  stylometry_id,
+  string(model.StatusDeleted),
+  stylometryCurrentUserID(),
+)</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>8. Регистрация пользователя</h3>
+    <p><strong>URL:</strong> <code>POST http://127.0.0.1:8080/api/users</code></p>
+    <p><strong>JSON:</strong></p>
+    <pre><code>{
+  "stylometry_sample_name": "testuser",
+  "stylometry_sample_password": "12345"
+}</code></pre>
+    <p><strong>Ответ:</strong></p>
+    <pre><code>{
+  "user": {
+    "stylometry_sample_id": 25,
+    "stylometry_sample_name": "testuser"
+  }
+}</code></pre>
+    <p><strong>Код регистрации:</strong></p>
+    <pre><code>stylometry_user := model.StylometrySampleUser{
+  StylometrySampleName:     stylometry_name,
+  StylometrySamplePassword: stylometry_password,
+}
+stylometry_err := stylometry_repository.DB.Create(&amp;stylometry_user).Error</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>9. Заглушка входа</h3>
+    <p><strong>URL:</strong> <code>POST http://127.0.0.1:8080/api/auth/login</code></p>
+    <pre><code>{
+  "authenticated": true,
+  "stylometry_current_user": 1,
+  "stylometry_auth_comment": "заглушка для лабораторной работы №4"
+}</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>10. Заглушка выхода</h3>
+    <p><strong>URL:</strong> <code>POST http://127.0.0.1:8080/api/auth/logout</code></p>
+    <pre><code>{
+  "deauthenticated": true,
+  "stylometry_auth_comment": "заглушка для лабораторной работы №4"
+}</code></pre>
+  </div>
+
+  <h2>4. Как реализован метод лайка</h2>
+  <p>
+    Метод лайка реализован как <code>POST /api/samples/:id/like</code>. В теле запроса передаётся
+    <code>stylometry_like</code>: значение <code>1</code> ставит лайк, значение <code>0</code> снимает лайк.
+    Пользователь берётся не с клиента, а из функции-singleton.
+  </p>
+  <pre><code>{
+  "stylometry_like": 1
+}</code></pre>
+
+  <p><strong>Модель лайка:</strong></p>
+  <pre><code>type StylometrySampleLike struct {
+  StylometrySampleLikeID       uint `gorm:"primaryKey;column:StylometrySampleLikeID"`
+  StylometrySampleUserID       uint `gorm:"column:StylometrySampleUserID;not null"`
+  StylometrySampleTextSampleID uint `gorm:"column:StylometrySampleTextSampleID;not null"`
+}</code></pre>
+
+  <p><strong>Пользователь берётся через singleton:</strong></p>
+  <pre><code>const stylometrySampleFixedUserID uint = 1
+
+func CurrentUser() *StylometrySampleCurrentUser {
+  stylometrySampleCurrentUserOnce.Do(func() {
+    stylometrySampleCurrentUser = &amp;StylometrySampleCurrentUser{
+      StylometrySampleID: stylometrySampleFixedUserID,
+    }
+  })
+
+  return stylometrySampleCurrentUser
+}</code></pre>
+
+  <p><strong>Handler проверяет id, тело запроса и вызывает репозиторий:</strong></p>
+  <pre><code>stylometry_ok, stylometry_err := stylometry_h.Repository.SetLike(
+  uint(stylometry_id),
+  stylometry_like_value,
+)</code></pre>
+
+  <p><strong>Repository проверяет, что карточка опубликована, и ставит или снимает лайк:</strong></p>
+  <pre><code>if stylometry_like_value == 1 {
+  stylometry_err = stylometry_repository.DB.
+    Clauses(clause.OnConflict{DoNothing: true}).
+    Create(&amp;stylometry_like).Error
+  return true, stylometry_err
+}
+
+stylometry_err = stylometry_repository.DB.
+  Where("\"StylometrySampleUserID\" = ? AND \"StylometrySampleTextSampleID\" = ?",
+    stylometryCurrentUserID(),
+    stylometry_id,
+  ).
+  Delete(&amp;model.StylometrySampleLike{}).Error</code></pre>
+
+  <p>
+    <code>OnConflict{DoNothing: true}</code> нужен, чтобы повторный лайк от того же пользователя не создавал дубль.
+    После изменения лайка карточка перечитывается из БД, и в ответе возвращается новое значение
+    <code>stylometry_sample_likes_count</code>.
+  </p>
+
+  <h2>5. Схема HTTPS</h2>
+  <p>
+    HTTPS — это HTTP, который передаётся внутри защищённого TLS-соединения.
+    В моей лабораторной локально используется обычный HTTP на <code>127.0.0.1:8080</code>,
+    но в реальной публикации сервис можно закрыть HTTPS через сертификат или reverse proxy.
+  </p>
+  <pre><code>Клиент/Postman/SPA
+      |
+      | 1. DNS: получить IP домена
+      v
+Сервер
+      |
+      | 2. TCP handshake: SYN -> SYN/ACK -> ACK
+      v
+TLS handshake
+      |
+      | 3. Сервер отправляет сертификат
+      | 4. Клиент проверяет сертификат через центр сертификации
+      | 5. Стороны договариваются о ключах шифрования
+      v
+HTTP внутри TLS
+      |
+      | 6. GET /api/samples или POST /api/samples
+      | 7. Ответ JSON передаётся в зашифрованном виде</code></pre>
+
+  <p><strong>Код из лабы показывает локальный HTTP-сервер:</strong></p>
+  <pre><code>if stylometry_err := stylometry_r.Run(":8080"); stylometry_err != nil {
+  logrus.Fatal(stylometry_err)
+}</code></pre>
+  <p>
+    Если запускать Gin напрямую по HTTPS, используется сертификат и ключ:
+  </p>
+  <pre><code>stylometry_r.RunTLS(":443", "cert.pem", "key.pem")</code></pre>
+
+  <h2>6. Контрольные вопросы</h2>
+
+  <div class="card">
+    <h3>Что такое веб-сервис?</h3>
+    <p>
+      Веб-сервис — это серверная часть приложения, которая принимает запросы по сети и возвращает данные
+      в стандартном формате, чаще всего JSON. В моей лабораторной веб-сервис отдаёт карточки текстовых
+      образцов, принимает файлы, меняет статусы и работает с таблицами БД.
+    </p>
+    <pre><code>stylometry_api := stylometry_r.Group("/api")
+{
+  stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetStylometrySampleList)
+  stylometry_api.POST("/samples", stylometry_stylometryHandler.APIPostStylometrySampleDraft)
+}</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>Что такое REST?</h3>
+    <p>
+      REST — это стиль проектирования API, где данные представлены как ресурсы, у каждого ресурса есть URL,
+      а действие задаётся HTTP-методом. Например, ресурс карточек — <code>/api/samples</code>:
+      <code>GET</code> получает данные, <code>POST</code> создаёт, <code>DELETE</code> удаляет.
+    </p>
+    <pre><code>GET    /api/samples
+POST   /api/samples
+DELETE /api/samples/:id</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>Что такое RPC?</h3>
+    <p>
+      RPC — это подход, где клиент вызывает удалённую процедуру как функцию. В REST главный акцент на ресурсе,
+      а в RPC — на действии. В моей лабораторной основа API REST, но методы публикации и лайка похожи на RPC,
+      потому что они выполняют конкретное действие над карточкой.
+    </p>
+    <pre><code>PUT  /api/samples/draft/publish
+POST /api/samples/:id/like</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>Заголовки HTTP</h3>
+    <p>
+      Заголовки HTTP передают служебную информацию о запросе и ответе. Например:
+      <code>Content-Type</code> сообщает формат тела, <code>Accept</code> — какой формат ждёт клиент,
+      <code>Authorization</code> используется для токена авторизации.
+    </p>
+    <pre><code>Content-Type: application/json
+Accept: application/json</code></pre>
+    <p>Для загрузки изображения и видео в моей лабораторной используется другой тип:</p>
+    <pre><code>Content-Type: multipart/form-data</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>Методы HTTP</h3>
+    <p>
+      Основные методы: <code>GET</code> — получить данные, <code>POST</code> — создать или выполнить действие,
+      <code>PUT</code> — полностью изменить состояние ресурса, <code>DELETE</code> — удалить ресурс.
+      В моей лабораторной используются все эти методы.
+    </p>
+    <pre><code>stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetStylometrySampleList)
+stylometry_api.POST("/samples", stylometry_stylometryHandler.APIPostStylometrySampleDraft)
+stylometry_api.PUT("/samples/draft/publish", stylometry_stylometryHandler.APIPutStylometrySamplePublishDraft)
+stylometry_api.DELETE("/samples/:id", stylometry_stylometryHandler.APIDeleteStylometrySample)</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>Версии HTTP</h3>
+    <p>
+      HTTP/0.9 был самым простым и поддерживал только получение HTML. HTTP/1.0 добавил заголовки и коды статусов.
+      HTTP/1.1 добавил постоянные соединения и обязательный заголовок <code>Host</code>.
+      HTTP/2 поддерживает мультиплексирование запросов в одном соединении.
+      HTTP/3 работает поверх QUIC и UDP, что уменьшает задержки.
+    </p>
+    <p>
+      Для кода моей лабораторной версия HTTP обычно выбирается сервером и клиентом автоматически,
+      а сам обработчик в Go остаётся тем же.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>Что такое HTTPS?</h3>
+    <p>
+      HTTPS — это защищённый вариант HTTP. Он использует TLS для шифрования данных, проверки подлинности сервера
+      и защиты от подмены трафика. Для пользователя отличие видно по схеме адреса:
+      <code>https://</code> вместо <code>http://</code>.
+    </p>
+    <pre><code>http://127.0.0.1:8080/api/samples   // локальная лабораторная
+https://example.ru/api/samples       // публикация с TLS-сертификатом</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>Модель OSI ISO</h3>
+    <p>
+      Модель OSI описывает передачу данных по сети в 7 уровнях.
+      Моя лабораторная работает на прикладном уровне, потому что использует HTTP API.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Уровень</th>
+          <th>Название</th>
+          <th>Пример в моей лабораторной</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>7</td><td>Прикладной</td><td>HTTP API: <code>GET /api/samples</code></td></tr>
+        <tr><td>6</td><td>Представления</td><td>JSON, кодировка UTF-8, TLS-шифрование часто относят сюда</td></tr>
+        <tr><td>5</td><td>Сеансовый</td><td>Поддержание соединения между клиентом и сервером</td></tr>
+        <tr><td>4</td><td>Транспортный</td><td>TCP для HTTP/1.1 и HTTP/2</td></tr>
+        <tr><td>3</td><td>Сетевой</td><td>IP-адрес сервера</td></tr>
+        <tr><td>2</td><td>Канальный</td><td>Ethernet или Wi-Fi</td></tr>
+        <tr><td>1</td><td>Физический</td><td>Кабель, радиосигнал Wi-Fi</td></tr>
+      </tbody>
+    </table>
+    <pre><code>stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetStylometrySampleList)</code></pre>
+  </div>
+</main>
+</body>
+</html>

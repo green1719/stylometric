@@ -4,26 +4,33 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#F7F7F7">
-    <title>{{ .stylometry_sample.StylometrySampleTitle }} — Стилометрия</title>
-    <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css">
+    <title>{{ .stylometry_sample.StylometrySampleTextCreator }} — Стилометрия</title>
+    <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css?v=gray-blocks-2">
 </head>
 <body>
     <main class="app-shell feed-page">
-        <video
-            class="feed-media"
-            autoplay
-            muted
-            loop
-            playsinline
-            poster="{{ .stylometry_sample.StylometrySampleImageURL }}"
-            aria-label="Видео к образцу {{ .stylometry_sample.StylometrySampleTitle }}"
-        >
-            <source
+        {{ if eq .stylometry_sample.StylometrySampleVideoURL "/stylometry_static/stylometry_default_video.svg" }}
+            <img
+                class="feed-media"
                 src="{{ .stylometry_sample.StylometrySampleVideoURL }}"
-                type="video/mp4"
-                onerror="this.remove();"
+                alt="Видео по умолчанию для образца {{ .stylometry_sample.StylometrySampleTextCreator }}"
             >
-        </video>
+        {{ else }}
+            <video
+                class="feed-media"
+                autoplay
+                muted
+                loop
+                playsinline
+                poster="{{ .stylometry_sample.StylometrySampleImageURL }}"
+                aria-label="Видео к образцу {{ .stylometry_sample.StylometrySampleTextCreator }}"
+            >
+                <source
+                    src="{{ .stylometry_sample.StylometrySampleVideoURL }}"
+                    type="video/mp4"
+                >
+            </video>
+        {{ end }}
 
         <div class="feed-shade" aria-hidden="true"></div>
 
@@ -34,8 +41,7 @@
 
         <section class="feed-content" aria-labelledby="stylometry-title">
             <div class="feed-main">
-                <p class="catalog-id">{{ .stylometry_sample.StylometrySampleAuthorName }}</p>
-                <h2 id="stylometry-title">{{ .stylometry_sample.StylometrySampleTitle }}</h2>
+                <h2 id="stylometry-title">{{ .stylometry_sample.StylometrySampleTextCreator }}</h2>
 
                 <details class="description">
                     <summary>
@@ -49,11 +55,11 @@
                 <div class="metrics" aria-label="Стилометрические маркеры">
                     <div class="metric">
                         <span>Длина предл. ≈</span>
-                        <strong>{{ .stylometry_sample.StylometrySampleAvgSentLen }} слов</strong>
+                        <strong>{{ .stylometry_sample.StylometrySampleAverageSentenceLength }} слов</strong>
                     </div>
                     <div class="metric">
                         <span>Союзы =</span>
-                        <strong>{{ .stylometry_sample.StylometrySampleConjFreq }} %</strong>
+                        <strong>{{ .stylometry_sample.StylometrySampleConjunctionFrequency }} %</strong>
                     </div>
                 </div>
 
@@ -70,19 +76,19 @@
                         </small>
                     </div>
 
-                    <a
-                        class="feed-action next-button"
-                        href="/samples/grid"
-                        aria-label="Вернуться к плитке"
-                    >
+	                    <a
+	                        class="feed-action next-button"
+	                        href="/samples/feed?stylometry_id={{ .stylometry_sample.StylometrySampleID }}&next=true"
+	                        aria-label="Следующий образец"
+	                    >
                         <span class="round-action" aria-hidden="true">
                             <svg viewBox="0 0 24 24">
                                 <path d="M5 12h14" />
                                 <path d="m13 6 6 6-6 6" />
                             </svg>
                         </span>
-                        <small>Плитка</small>
-                    </a>
+	                        <small>Далее</small>
+	                    </a>
                 </div>
             </aside>
         </section>

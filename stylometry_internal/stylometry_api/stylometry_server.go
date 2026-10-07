@@ -35,6 +35,20 @@ func StartServer() {
 	stylometry_r.POST("/samples/draft/publish", stylometry_stylometryHandler.PostStylometrySamplePublishDraft)
 	stylometry_r.POST("/samples/delete", stylometry_stylometryHandler.PostStylometrySampleDelete)
 
+	//3 labaa
+	stylometry_api := stylometry_r.Group("/api")
+	{
+		stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetStylometrySampleList)
+		stylometry_api.GET("/samples/feed", stylometry_stylometryHandler.APIGetStylometrySampleFeed)
+		stylometry_api.GET("/samples/draft", stylometry_stylometryHandler.APIGetStylometrySampleDraft)
+		stylometry_api.POST("/samples", stylometry_stylometryHandler.APIPostStylometrySampleDraft)
+		stylometry_api.PUT("/samples/draft/publish", stylometry_stylometryHandler.APIPutStylometrySamplePublishDraft)
+		stylometry_api.DELETE("/samples/:id", stylometry_stylometryHandler.APIDeleteStylometrySample)
+		stylometry_api.POST("/samples/:id/like", stylometry_stylometryHandler.APIPostStylometrySampleLike)
+		stylometry_api.POST("/users", stylometry_stylometryHandler.APIPostStylometryUserRegister)
+		stylometry_api.POST("/auth/login", stylometry_stylometryHandler.APIPostStylometryAuthLogin)
+		stylometry_api.POST("/auth/logout", stylometry_stylometryHandler.APIPostStylometryAuthLogout)
+	}
 	log.Println("Server start up: http://127.0.0.1:8080/samples/feed")
 	if stylometry_err := stylometry_r.Run(":8080"); stylometry_err != nil {
 		logrus.Fatal(stylometry_err)

@@ -6,51 +6,22 @@ import (
 	"strings"
 )
 
-// StylometrySampleFragment описывает один фрагмент текста классика.
-type StylometrySampleFragment struct {
-	StylometrySampleKey        string
-	StylometrySampleLabel      string
-	StylometrySampleAuthorName string
-	StylometrySampleText       string
-}
-
 // StylometrySampleMetrics хранит рассчитанные стилометрические параметры.
 type StylometrySampleMetrics struct {
-	StylometrySampleAvgSentLen float64
-	StylometrySampleConjFreq   float64
+	StylometrySampleAverageSentenceLength float64
+	StylometrySampleConjunctionFrequency  float64
 }
 
-var stylometrySampleClassicFragments = [...]StylometrySampleFragment{
-	{
-		StylometrySampleKey:        "tolstoy",
-		StylometrySampleLabel:      "Л. Н. Толстой",
-		StylometrySampleAuthorName: "Л. Н. Толстой",
-		StylometrySampleText:       "Всё смешалось в доме Облонских. Жена узнала, что муж был в связи с бывшею в их доме гувернанткой, и объявила мужу, что не может жить с ним в одном доме.",
-	},
-	{
-		StylometrySampleKey:        "chekhov",
-		StylometrySampleLabel:      "А. П. Чехов",
-		StylometrySampleAuthorName: "А. П. Чехов",
-		StylometrySampleText:       "В приёмной у земского доктора сидело много народу. День был душный, больные говорили вполголоса, и за окнами лениво пылила дорога.",
-	},
-	{
-		StylometrySampleKey:        "dostoevsky",
-		StylometrySampleLabel:      "Ф. М. Достоевский",
-		StylometrySampleAuthorName: "Ф. М. Достоевский",
-		StylometrySampleText:       "В начале июля, в чрезвычайно жаркое время, под вечер, один молодой человек вышел из своей каморки и медленно, как бы в нерешимости, отправился к мосту.",
-	},
-	{
-		StylometrySampleKey:        "turgenev",
-		StylometrySampleLabel:      "И. С. Тургенев",
-		StylometrySampleAuthorName: "И. С. Тургенев",
-		StylometrySampleText:       "Вечер был тихий и ясный; солнце садилось, и последние лучи его мягко золотили верхушки деревьев, между которыми тянулась широкая дорога.",
-	},
-	{
-		StylometrySampleKey:        "pushkin",
-		StylometrySampleLabel:      "А. С. Пушкин",
-		StylometrySampleAuthorName: "А. С. Пушкин",
-		StylometrySampleText:       "Мой дядя самых честных правил, когда не в шутку занемог, он уважать себя заставил и лучше выдумать не мог.",
-	},
+var stylometrySampleSeedTexts = map[string]string{
+	"tolstoy":    "Всё смешалось в доме Облонских. Жена узнала, что муж был в связи с бывшею в их доме гувернанткой, и объявила мужу, что не может жить с ним в одном доме.",
+	"chekhov":    "В приёмной у земского доктора сидело много народу. День был душный, больные говорили вполголоса, и за окнами лениво пылила дорога.",
+	"dostoevsky": "В начале июля, в чрезвычайно жаркое время, под вечер, один молодой человек вышел из своей каморки и медленно, как бы в нерешимости, отправился к мосту.",
+	"turgenev":   "Вечер был тихий и ясный; солнце садилось, и последние лучи его мягко золотили верхушки деревьев, между которыми тянулась широкая дорога.",
+	"pushkin":    "Мой дядя самых честных правил, когда не в шутку занемог, он уважать себя заставил и лучше выдумать не мог.",
+	"gogol":      "Я пригласил вас, господа, с тем чтобы сообщить вам пренеприятное известие: к нам едет ревизор.",
+	"lermontov":  "Белеет парус одинокий в тумане моря голубом. Что ищет он в стране далёкой, что кинул он в краю родном?",
+	"kuprin":     "Гранатовый браслет был золотой, низкопробный, с плохо отшлифованными гранатами, но Вера сразу узнала его.",
+	"bunyn":      "Тёмные аллеи стояли передо мной, и в прохладной тени старых лип вспоминалось всё, что давно минуло.",
 }
 
 var stylometrySampleWordRegexp = regexp.MustCompile(`[\p{L}\p{N}]+`)
@@ -63,51 +34,15 @@ var stylometrySampleConjunctions = map[string]struct{}{
 	"потому": {}, "поэтому": {}, "однако": {}, "зато": {}, "причём": {}, "притом": {},
 }
 
-// ClassicFragments возвращает список фрагментов для HTML-формы.
-func ClassicFragments() []StylometrySampleFragment {
-	return stylometrySampleClassicFragments[:]
-}
-
-// ResolveFragment выбирает пользовательский фрагмент или один из сохранённых фрагментов классиков.
-func ResolveFragment(stylometry_title string, stylometry_key string, stylometry_custom_text string) StylometrySampleFragment {
-	stylometry_text := strings.TrimSpace(stylometry_custom_text)
-	if stylometry_text != "" {
-		return StylometrySampleFragment{
-			StylometrySampleKey:        "custom",
-			StylometrySampleLabel:      "Свой фрагмент",
-			StylometrySampleAuthorName: "Не указан",
-			StylometrySampleText:       stylometry_text,
-		}
-	}
-
-	if stylometry_fragment, stylometry_ok := FragmentByKey(stylometry_key); stylometry_ok {
-		return stylometry_fragment
-	}
-
-	stylometry_title_lower := strings.ToLower(stylometry_title)
-	for _, stylometry_fragment := range stylometrySampleClassicFragments {
-		stylometry_author_lower := strings.ToLower(stylometry_fragment.StylometrySampleAuthorName)
-		if strings.Contains(stylometry_title_lower, stylometry_fragment.StylometrySampleKey) || strings.Contains(stylometry_title_lower, stylometry_author_lower) {
-			return stylometry_fragment
-		}
-	}
-
-	return stylometrySampleClassicFragments[0]
-}
-
-// FragmentByKey ищет сохранённый фрагмент по ключу.
-func FragmentByKey(stylometry_key string) (StylometrySampleFragment, bool) {
+// SeedTextByKey возвращает стартовый текст для начального наполнения базы.
+func SeedTextByKey(stylometry_key string) (string, bool) {
 	stylometry_normalized_key := strings.TrimSpace(strings.ToLower(stylometry_key))
-	for _, stylometry_fragment := range stylometrySampleClassicFragments {
-		if stylometry_fragment.StylometrySampleKey == stylometry_normalized_key {
-			return stylometry_fragment, true
-		}
-	}
-	return StylometrySampleFragment{}, false
+	stylometry_text, stylometry_ok := stylometrySampleSeedTexts[stylometry_normalized_key]
+	return stylometry_text, stylometry_ok
 }
 
-// AnalyzeFragment считает среднюю длину предложения и частоту союзов.
-func AnalyzeFragment(stylometry_text string) StylometrySampleMetrics {
+// AnalyzeText считает среднюю длину предложения и частоту союзов.
+func AnalyzeText(stylometry_text string) StylometrySampleMetrics {
 	stylometry_words := stylometrySampleWordRegexp.FindAllString(strings.ToLower(stylometry_text), -1)
 	stylometry_word_count := len(stylometry_words)
 	if stylometry_word_count == 0 {
@@ -135,8 +70,8 @@ func AnalyzeFragment(stylometry_text string) StylometrySampleMetrics {
 	stylometry_conj_freq := float64(stylometry_conjunction_count) / float64(stylometry_word_count) * 100
 
 	return StylometrySampleMetrics{
-		StylometrySampleAvgSentLen: stylometrySampleRoundOne(stylometry_avg_len),
-		StylometrySampleConjFreq:   stylometrySampleRoundOne(stylometry_conj_freq),
+		StylometrySampleAverageSentenceLength: stylometrySampleRoundOne(stylometry_avg_len),
+		StylometrySampleConjunctionFrequency:  stylometrySampleRoundOne(stylometry_conj_freq),
 	}
 }
 
