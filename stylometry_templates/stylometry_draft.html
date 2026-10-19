@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#F7F7F7">
     <title>Добавление текстового образца — Стилометрия</title>
-    <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css?v=gray-blocks-7">
+    <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css?v=readability-9">
 </head>
 <body>
     <main
         class="app-shell form-page page-with-image"
-        style="--stylometry-page-image: url('{{ .stylometry_sample.StylometrySampleImageURL }}')"
+        style="--stylometry-page-image: url('{{ .stylometry_sample.ImageURL }}')"
     >
         <div class="page-shade" aria-hidden="true"></div>
 
@@ -28,8 +28,8 @@
                     <div class="media-fields">
                         <label class="media-field">
                             <img
-                                src="{{ .stylometry_sample.StylometrySampleImageURL }}"
-                                alt="Изображение {{ .stylometry_sample.StylometrySampleTextCreator }}"
+                                src="{{ .stylometry_sample.ImageURL }}"
+                                alt="Изображение {{ .stylometry_sample.TextCreator }}"
                             >
                             <span class="media-field__shade" aria-hidden="true"></span>
                             <span class="media-field__icon" aria-hidden="true">▣</span>
@@ -38,15 +38,15 @@
                         </label>
 
                         <label class="media-field">
-                            {{ if eq .stylometry_sample.StylometrySampleVideoURL "/stylometry_static/stylometry_default_video.svg" }}
+                            {{ if eq .stylometry_sample.VideoURL "/stylometry_static/stylometry_default_video.svg" }}
                                 <img
-                                    src="{{ .stylometry_sample.StylometrySampleVideoURL }}"
+                                    src="{{ .stylometry_sample.VideoURL }}"
                                     alt="Видео по умолчанию"
                                 >
                             {{ else }}
-                                <video muted playsinline preload="metadata" poster="{{ .stylometry_sample.StylometrySampleImageURL }}">
+                                <video muted playsinline preload="metadata" poster="{{ .stylometry_sample.ImageURL }}">
                                     <source
-                                        src="{{ .stylometry_sample.StylometrySampleVideoURL }}"
+                                        src="{{ .stylometry_sample.VideoURL }}"
                                         type="video/mp4"
                                     >
                                 </video>
@@ -60,12 +60,12 @@
 
                     <label class="field field--wide">
                         <span>Автор текстового образца</span>
-                        <input type="text" value="{{ .stylometry_sample.StylometrySampleTextCreator }}" readonly>
+                        <input type="text" value="{{ .stylometry_sample.TextCreator }}" readonly>
                     </label>
 
                     <label class="field field--wide">
                         <span>Текстовый отрывок</span>
-                        <textarea name="stylometry_descr" rows="5">{{ .stylometry_sample.StylometrySampleDescr }}</textarea>
+                        <textarea name="stylometry_descr" rows="5">{{ .stylometry_sample.ShortDescription }}</textarea>
                     </label>
 
                     <button class="primary-action" type="submit">Опубликовать</button>
@@ -78,7 +78,7 @@
                     <div class="media-fields">
                         <label class="media-field">
                             <img
-                                src="{{ .stylometry_sample.StylometrySampleImageURL }}"
+                                src="{{ .stylometry_sample.ImageURL }}"
                                 alt="Фото по умолчанию"
                             >
                             <span class="media-field__shade" aria-hidden="true"></span>
@@ -88,15 +88,15 @@
                         </label>
 
                         <label class="media-field">
-                            {{ if eq .stylometry_sample.StylometrySampleVideoURL "/stylometry_static/stylometry_default_video.svg" }}
+                            {{ if eq .stylometry_sample.VideoURL "/stylometry_static/stylometry_default_video.svg" }}
                                 <img
-                                    src="{{ .stylometry_sample.StylometrySampleVideoURL }}"
+                                    src="{{ .stylometry_sample.VideoURL }}"
                                     alt="Видео по умолчанию"
                                 >
                             {{ else }}
-                                <video muted playsinline preload="metadata" poster="{{ .stylometry_sample.StylometrySampleImageURL }}">
+                                <video muted playsinline preload="metadata" poster="{{ .stylometry_sample.ImageURL }}">
                                     <source
-                                        src="{{ .stylometry_sample.StylometrySampleVideoURL }}"
+                                        src="{{ .stylometry_sample.VideoURL }}"
                                         type="video/mp4"
                                     >
                                 </video>

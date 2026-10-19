@@ -1,8 +1,6 @@
-# stylometry
+# Stylometry
 
-Проект для лабораторных работ по теме стилометрии. Приложение хранит текстовые образцы разных авторов, считает простые стилометрические признаки и отдаёт данные через веб-страницы и REST API.
-
-Основная сущность проекта — текстовый образец. В моей теме это аналог услуги из задания: карточка содержит автора текста, текстовый отрывок, изображение, видео, статус, создателя и рассчитанные признаки.
+`Stylometry` — учебный веб-сервис для хранения текстовых образцов и определения простых стилометрических характеристик текста. Карточка образца содержит автора, текстовый отрывок, изображение, короткое видео, статус, создателя и вычисляемые показатели. Для лабораторной работы №3 интерфейс HTML-страниц отключён, а данные доступны через REST API.
 
 ## Запуск
 
@@ -10,186 +8,251 @@
 ./stylometry_open.sh
 ```
 
-После запуска:
+REST API: `http://127.0.0.1:8080/api`.
 
-- приложение: `http://127.0.0.1:8080/samples/feed`
-- Adminer: `http://127.0.0.1:8082`
-- MinIO: `http://127.0.0.1:9001`
+- Adminer: `http://127.0.0.1:8082`;
+- MinIO: `http://127.0.0.1:9001`;
+- bucket MinIO: `stylometry`.
 
-Данные для Adminer:
+Параметр `ENABLE_FRONTEND=false` отключает маршруты HTML-страниц и статические ресурсы интерфейса. При таком значении `/`, `/samples/feed`, `/samples/draft` и `/samples/grid` возвращают `404 Not Found`, а `/api/...` продолжает работать. Чтобы вернуть интерфейс после защиты, нужно установить `ENABLE_FRONTEND=true` и перезапустить приложение.
 
-- System: `PostgreSQL`
-- Server: `postgres`
-- Username: `stylometry_user`
-- Password: `stylometry_password`
-- Database: `stylometry_db`
+## Фиксированный пользователь
 
-Данные для MinIO:
+Авторизация в этой лабораторной работе не реализована. Функция-singleton `CurrentUser()` из модуля `stylometry_session` создаёт текущего пользователя с `ID = 1`. Этот ID используется при создании и публикации черновика, лайке и мягком удалении.
 
-- login: `root`
-- password: `rootpassword`
-- bucket: `stylometry`
+## Структура базы данных
 
-## Текущий пользователь
+### Users
 
-В лабораторной работе авторизация ещё не реализована полностью, поэтому текущий пользователь зафиксирован на бэкенде. Singleton-функция `CurrentUser()` находится в модуле `stylometry_session` и возвращает пользователя с id `1`.
+| Поле | Тип PostgreSQL | Ключи и назначение |
+| --- | --- | --- |
+| `ID` | `bigint` | PK, идентификатор пользователя |
+| `Name` | `varchar(120)` | имя пользователя, обязательное поле |
+| `Password` | `varchar(255)` | пароль, обязательное поле |
 
-Этот id используется при создании черновика, получении черновика, публикации, лайке и удалении карточки.
+### StylometrySamples
 
-## HTTP API
+| Поле | Тип PostgreSQL | Ключи и назначение |
+| --- | --- | --- |
+| `ID` | `bigint` | PK, идентификатор текстового образца |
+| `TextCreator` | `varchar(160)` | автор текста, обязательное поле |
+| `ShortDescription` | `varchar(800)` | текстовый отрывок |
+| `Status` | `varchar(20)` | `draft`, `published` или `deleted` |
+| `ImageURL` | `varchar(500)` | URL изображения в MinIO |
+| `VideoURL` | `varchar(500)` | URL видео в MinIO |
+| `AverageSentenceLength` | `numeric` | средняя длина предложения |
+| `ConjunctionFrequency` | `numeric` | частота союзов |
+| `CreatedAt` | `timestamp with time zone` | дата создания |
+| `UpdatedAt` | `timestamp with time zone` | дата публикации или изменения |
+| `CreatorID` | `bigint` | FK → `Users.ID`, создатель карточки |
 
-Все методы API начинаются с `/api`.
+### Likes
 
-### GET /api/samples
+| Поле | Тип PostgreSQL | Ключи и назначение |
+| --- | --- | --- |
+| `ID` | `bigint` | PK, идентификатор лайка |
+| `UserID` | `bigint` | FK → `Users.ID` |
+| `SampleID` | `bigint` | FK → `StylometrySamples.ID` |
 
-Возвращает список опубликованных текстовых образцов. Записи со статусом `deleted` клиенту не передаются.
+Связи используют `RESTRICT`, поэтому каскадное удаление запрещено. Уникальный индекс `idx_one_draft_per_user` допускает один черновик на пользователя, а `idx_user_sample_like` не допускает повторный лайк одной карточке.
 
-Фильтр:
+## Формат карточки в ответах
 
-```text
-/api/samples?stylometry_avg_len=10
-```
-
-Параметр `stylometry_avg_len` ограничивает максимальную среднюю длину предложения.
-
-### GET /api/samples/feed
-
-Возвращает один опубликованный образец для ленты. Без параметров возвращается первый опубликованный образец.
-
-Для перехода к следующему элементу:
-
-```text
-/api/samples/feed?stylometry_id=1&next=true
-```
-
-Если следующего элемента нет, сервер возвращает первый опубликованный образец.
-
-### GET /api/samples/draft
-
-Возвращает черновик текущего пользователя. Id в URL не передаётся, потому что черновик определяется по текущему пользователю.
-
-У одного пользователя может быть только один черновик.
-
-### POST /api/samples
-
-Создаёт или обновляет черновик текстового образца. Запрос отправляется как `multipart/form-data`.
-
-Поля:
-
-- `stylometry_text_creator` — автор текста;
-- `stylometry_sample_descr` — текстовый отрывок;
-- `stylometry_image` — файл изображения;
-- `stylometry_video` — файл короткого видео.
-
-Файлы загружаются в MinIO. В БД сохраняются ссылки на загруженные объекты.
-
-### PUT /api/samples/draft/publish
-
-Публикует черновик текущего пользователя. Тело запроса не требуется.
-
-На бэкенде меняется статус на `published`, рассчитываются стилометрические признаки и заполняется поле `StylometrySampleUpdatedAt`.
-
-### DELETE /api/samples/:id
-
-Логически удаляет текстовый образец текущего пользователя.
-
-Физически запись из БД не удаляется. В таблице меняется статус на `deleted`. Удаление сделано через SQL-запрос `UPDATE`, без ORM-модели.
-
-### POST /api/samples/:id/like
-
-Ставит или снимает лайк от текущего пользователя.
-
-Тело запроса:
+В ответах не передаётся внутренний статус `Status`. Карточка имеет следующие поля:
 
 ```json
 {
-  "stylometry_like": 1
+  "stylometry_sample_id": 1,
+  "stylometry_sample_text_creator": "Лев Толстой",
+  "stylometry_sample_descr": "Все смешалось в доме Облонских.",
+  "stylometry_sample_image_url": "http://localhost:9000/stylometry/stylometry_images/stylometry_tolstoy.jpg",
+  "stylometry_sample_video_url": "http://localhost:9000/stylometry/stylometry_videos/stylometry_tolstoy.mp4",
+  "stylometry_sample_average_sentence_length": 15,
+  "stylometry_sample_conjunction_frequency": 10,
+  "stylometry_sample_likes_count": 3,
+  "stylometry_sample_is_current_user_creator": 1,
+  "is_liked": 0,
+  "stylometry_sample_created_at": "2026-10-19T12:00:00Z",
+  "stylometry_sample_updated_at": "2026-10-19T12:01:00Z"
 }
 ```
 
-`1` ставит лайк, `0` снимает лайк. Повторная постановка лайка не создаёт дубликат.
+`stylometry_sample_is_current_user_creator` показывает, создана ли карточка текущим пользователем. `is_liked` показывает существование записи в `Likes` для текущего пользователя и карточки: `1` — лайк есть, `0` — лайка нет.
 
-### POST /api/users
+## REST API для показа ЛР-3
 
-Регистрирует нового пользователя.
+Базовый адрес: `http://127.0.0.1:8080`. Ниже перечислены десять запросов Postman в порядке демонстрации.
 
-Тело запроса:
+### 01. Список опубликованных образцов
+
+- **Метод и URL:** `GET /api/samples`
+- **Назначение:** возвращает только опубликованные образцы; `deleted` не выдаются.
+- **Параметры и тело:** не требуются.
+- **Коды:** `200 OK`; `500 Internal Server Error` при ошибке БД.
+
+```json
+{ "items": [{ "stylometry_sample_id": 1, "stylometry_sample_text_creator": "Лев Толстой", "is_liked": 0 }] }
+```
+
+### 02. Список образцов с фильтром
+
+- **Метод и URL:** `GET /api/samples?stylometry_avg_len=15`
+- **Назначение:** возвращает опубликованные образцы с `AverageSentenceLength` не больше переданного значения.
+- **Параметры:** `stylometry_avg_len` — число от `0` до `30`.
+- **Тело:** не требуется.
+- **Коды:** `200 OK`; `400 Bad Request`, если параметр не является числом или выходит за диапазон; `500 Internal Server Error`.
+
+```json
+{ "items": [{ "stylometry_sample_id": 1, "stylometry_sample_average_sentence_length": 15, "is_liked": 0 }] }
+```
+
+Фильтр выполняется в GORM-запросе как `AverageSentenceLength <= stylometry_avg_len`, а не над массивом в Go.
+
+### 03. Создание черновика с медиа
+
+- **Метод и URL:** `POST /api/samples`
+- **Назначение:** создаёт или обновляет один черновик текущего пользователя.
+- **Тип тела:** `multipart/form-data`.
+- **Поля:** `image` — обязательный файл изображения; `video` — обязательный файл короткого видео; `text` — обязательное многострочное поле.
+
+Первая строка `text` — имя автора, все последующие строки — текстовый отрывок. Поддерживаются `\n` и `\r\n`; пробелы вокруг имени автора удаляются.
+
+```text
+text=Лев Толстой
+Все смешалось в доме Облонских.
+Жена узнала, что муж был в связи с бывшею в их доме гувернанткой.
+```
+
+- **Коды:** `201 Created`; `400 Bad Request`, если отсутствует файл, автор или отрывок; `500 Internal Server Error` при ошибке MinIO или БД.
 
 ```json
 {
-  "stylometry_sample_name": "Ivan Petrov",
-  "stylometry_sample_password": "stylometry123"
+  "draft": {
+    "stylometry_sample_id": 8,
+    "stylometry_sample_text_creator": "Лев Толстой",
+    "stylometry_sample_descr": "Все смешалось в доме Облонских.\nЖена узнала, что муж был в связи с бывшею в их доме гувернанткой.",
+    "is_liked": 0
+  }
 }
 ```
 
-В ответе пароль не возвращается.
+Файлы загружаются в MinIO; в БД сохраняются их URL. Отдельного поля автора нет.
 
-### POST /api/auth/login
+### 04. Получение черновика текущего пользователя
 
-Заглушка для следующей лабораторной работы. Возвращает успешную аутентификацию текущего фиксированного пользователя.
+- **Метод и URL:** `GET /api/samples/draft`
+- **Назначение:** получает единственный черновик фиксированного текущего пользователя.
+- **Параметры и тело:** не требуются.
+- **Коды:** `200 OK`; `500 Internal Server Error`.
 
-### POST /api/auth/logout
-
-Заглушка для следующей лабораторной работы. Возвращает успешную деавторизацию.
-
-## Таблицы БД
-
-### StylometrySampleUsers
-
-Пользователи приложения.
-
-| Поле | Описание |
-| --- | --- |
-| `StylometrySampleID` | первичный ключ |
-| `StylometrySampleName` | имя пользователя |
-| `StylometrySamplePassword` | пароль |
-
-### StylometrySampleTextSamples
-
-Текстовые образцы авторов.
-
-| Поле | Описание |
-| --- | --- |
-| `StylometrySampleID` | первичный ключ |
-| `StylometrySampleTextCreator` | автор текста |
-| `StylometrySampleShortDescription` | текстовый отрывок |
-| `StylometrySampleStatus` | статус: `draft`, `published`, `deleted` |
-| `StylometrySampleImageURL` | ссылка на изображение в MinIO |
-| `StylometrySampleVideoURL` | ссылка на видео в MinIO |
-| `StylometrySampleAverageSentenceLength` | средняя длина предложения |
-| `StylometrySampleConjunctionFrequency` | частота союзов |
-| `StylometrySampleCreatedAt` | дата создания |
-| `StylometrySampleUpdatedAt` | дата публикации/обновления |
-| `StylometrySampleCreatorID` | внешний ключ на пользователя |
-
-### StylometrySampleLikes
-
-Лайки текстовых образцов.
-
-| Поле | Описание |
-| --- | --- |
-| `StylometrySampleLikeID` | первичный ключ |
-| `StylometrySampleUserID` | внешний ключ на пользователя |
-| `StylometrySampleTextSampleID` | внешний ключ на текстовый образец |
-
-Пара `StylometrySampleUserID` и `StylometrySampleTextSampleID` уникальна, поэтому один пользователь не может поставить два одинаковых лайка одному образцу.
-
-## Модели и сериализаторы
-
-Модели GORM находятся в файле:
-
-```text
-stylometry_internal/stylometry_app/stylometry_model/stylometry_model.go
+```json
+{ "has_draft": true, "draft": { "stylometry_sample_id": 8, "stylometry_sample_text_creator": "Лев Толстой", "is_liked": 0 } }
 ```
 
-Сериализаторы ответов API находятся в файле:
+Если черновика нет, сервер возвращает `{"has_draft": false, "draft": null}` с кодом `200 OK`.
 
-```text
-stylometry_internal/stylometry_app/stylometry_serializer/stylometry_serializer.go
+### 05. Публикация черновика
+
+- **Метод и URL:** `PUT /api/samples/draft/publish`
+- **Назначение:** меняет статус черновика текущего пользователя на `published`.
+- **Параметры и тело:** не требуются.
+- **Коды:** `200 OK`; `404 Not Found`, если черновика нет; `500 Internal Server Error`.
+
+```json
+{
+  "published": true,
+  "sample": {
+    "stylometry_sample_id": 8,
+    "stylometry_sample_average_sentence_length": 12.5,
+    "stylometry_sample_conjunction_frequency": 4.2,
+    "is_liked": 0
+  }
+}
 ```
 
-В ответах API статус карточки не выводится. Он используется на бэкенде для бизнес-логики.
+Статус, `UpdatedAt` и стилометрические показатели рассчитываются на сервере и не приходят от клиента.
 
-## UML
+### 06. Первый элемент ленты
 
-UML-диаграмма проекта оформляется отдельно в StarUML. В ней должны быть показаны домены API, модели, таблицы БД и страницы фронтенда.
+- **Метод и URL:** `GET /api/samples/feed`
+- **Назначение:** получает первый опубликованный образец по возрастанию `ID`.
+- **Параметры и тело:** не требуются.
+- **Коды:** `200 OK`; `404 Not Found`, если опубликованных карточек нет; `500 Internal Server Error`.
+
+```json
+{ "stylometry_sample_id": 1, "stylometry_sample_text_creator": "Лев Толстой", "is_liked": 0 }
+```
+
+Возвращается один объект, а не массив. Метод продолжает работать при отключённом фронтенде.
+
+### 07. Следующий элемент ленты
+
+- **Метод и URL:** `GET /api/samples/feed?stylometry_id=1&next=true`
+- **Назначение:** получает следующую опубликованную карточку.
+- **Параметры:** `stylometry_id` — ID текущей карточки; `next=true` — переход вперёд.
+- **Тело:** не требуется.
+- **Коды:** `200 OK`; `400 Bad Request` при некорректном ID; `404 Not Found`, если лента пуста; `500 Internal Server Error`.
+
+```json
+{ "stylometry_sample_id": 2, "stylometry_sample_text_creator": "Антон Чехов", "is_liked": 0 }
+```
+
+Если следующей записи нет, репозиторий снова получает первую опубликованную карточку: лента циклическая.
+
+### 08. Проверка результата лайка
+
+- **Метод и URL:** `GET /api/samples/feed?stylometry_id=1`
+- **Назначение:** получает указанную опубликованную карточку и фактическое состояние лайка текущего пользователя.
+- **Параметры:** `stylometry_id` — ID карточки.
+- **Тело:** не требуется.
+- **Коды:** `200 OK`; `400 Bad Request` при некорректном ID; `404 Not Found`, если карточка не опубликована или не найдена; `500 Internal Server Error`.
+
+```json
+{ "stylometry_sample_id": 1, "stylometry_sample_likes_count": 4, "is_liked": 1 }
+```
+
+`is_liked` вычисляется по таблице `Likes`: после постановки лайка возвращается `1`, после снятия — `0`.
+
+### 09. Мягкое удаление образца
+
+- **Метод и URL:** `DELETE /api/samples/8`
+- **Назначение:** помечает карточку текущего пользователя как удалённую.
+- **Параметры:** `id` в URL — ID карточки.
+- **Тело:** не требуется.
+- **Коды:** `200 OK`; `400 Bad Request` при некорректном ID; `404 Not Found`, если карточка не принадлежит пользователю, отсутствует или уже удалена.
+
+```json
+{ "deleted": true }
+```
+
+Метод использует явный курсор PostgreSQL: `DECLARE`, `FETCH`, `UPDATE`, `CLOSE`, `COMMIT`. Строка остаётся в `StylometrySamples`, но получает статус `deleted`.
+
+### 10. Регистрация пользователя
+
+- **Метод и URL:** `POST /api/users`
+- **Назначение:** создаёт пользователя через GORM.
+- **Тело:** JSON или form-data с именем и паролем.
+
+```json
+{ "stylometry_sample_name": "postman_user", "stylometry_sample_password": "stylometry123" }
+```
+
+- **Коды:** `201 Created`; `400 Bad Request`, если имя отсутствует; `409 Conflict`, если имя уже занято; `500 Internal Server Error`.
+
+```json
+{ "user": { "stylometry_sample_id": 4, "stylometry_sample_name": "postman_user" } }
+```
+
+Пароль не возвращается. Если пароль не передан, сервер использует `stylometry123`.
+
+## Вспомогательный метод постановки лайка
+
+Перед проверкой №08 состояние `is_liked` меняет реальный маршрут `POST /api/samples/:id/like`. Тело `{"stylometry_like": 1}` ставит лайк, а `{"stylometry_like": 0}` снимает его. Ответ — `200 OK` с `liked` и обновлённой карточкой. Этот технический маршрут не входит в порядок десяти скриншотов, но необходим для показа `is_liked: 0` и `is_liked: 1`.
+
+## Заглушки следующей лабораторной
+
+`POST /api/auth/login` и `POST /api/auth/logout` сохранены как заглушки для лабораторной работы №4 и не входят в десять запросов ЛР-3.
+
+## Миграция имён
+
+При запуске приложение проверяет старую схему и переименовывает таблицы и столбцы через `ALTER TABLE ... RENAME` и `ALTER TABLE ... RENAME COLUMN`. Одноразовый SQL-вариант находится в `migrations/001_rename_stylometry_schema.sql`; данные, первичные ключи и внешние ключи сохраняются.

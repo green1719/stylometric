@@ -17,7 +17,7 @@ import (
 )
 
 func stylometryAPIUserID() uint {
-	return stylometry_session.CurrentUser().StylometrySampleID
+	return stylometry_session.CurrentUser().ID
 }
 
 func stylometryAPIFormFile(stylometry_ctx *gin.Context, stylometry_names ...string) (*multipart.FileHeader, error) {
@@ -39,12 +39,30 @@ type stylometryAPILikeRequest struct {
 }
 
 type stylometryAPIUserRequest struct {
-	StylometrySampleName     string `form:"stylometry_sample_name" json:"stylometry_sample_name"`
-	StylometrySamplePassword string `form:"stylometry_sample_password" json:"stylometry_sample_password"`
+	Name     string `form:"stylometry_sample_name" json:"stylometry_sample_name"`
+	Password string `form:"stylometry_sample_password" json:"stylometry_sample_password"`
+}
+
+// stylometrySplitDraftText separates the author from the text entered in one field.
+func stylometrySplitDraftText(stylometry_text string) (string, string, error) {
+	stylometry_text = strings.ReplaceAll(stylometry_text, "\r\n", "\n")
+	stylometry_text = strings.ReplaceAll(stylometry_text, "\r", "\n")
+	stylometry_parts := strings.SplitN(stylometry_text, "\n", 2)
+	if len(stylometry_parts) != 2 {
+		return "", "", errors.New("поле text должно содержать автора в первой строке и текстовый отрывок ниже")
+	}
+
+	stylometry_text_creator := strings.TrimSpace(stylometry_parts[0])
+	stylometry_description := stylometry_parts[1]
+	if stylometry_text_creator == "" || strings.TrimSpace(stylometry_description) == "" {
+		return "", "", errors.New("автор и текстовый отрывок в поле text не должны быть пустыми")
+	}
+
+	return stylometry_text_creator, stylometry_description, nil
 }
 
 // GET /api/samples
-func (stylometry_h *StylometrySampleHandler) APIGetStylometrySampleList(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) APIGetSampleList(stylometry_ctx *gin.Context) {
 	stylometry_raw_filter := strings.TrimSpace(stylometry_ctx.Query("stylometry_avg_len"))
 
 	var stylometry_max_avg_len *float64
@@ -72,7 +90,7 @@ func (stylometry_h *StylometrySampleHandler) APIGetStylometrySampleList(stylomet
 }
 
 // GET /api/samples/feed
-func (stylometry_h *StylometrySampleHandler) APIGetStylometrySampleFeed(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) APIGetSampleFeed(stylometry_ctx *gin.Context) {
 	stylometry_raw_id := strings.TrimSpace(stylometry_ctx.Query("stylometry_id"))
 	stylometry_next := strings.EqualFold(strings.TrimSpace(stylometry_ctx.Query("next")), "true")
 
@@ -102,7 +120,7 @@ func (stylometry_h *StylometrySampleHandler) APIGetStylometrySampleFeed(stylomet
 }
 
 // GET /api/samples/draft
-func (stylometry_h *StylometrySampleHandler) APIGetStylometrySampleDraft(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) APIGetSampleDraft(stylometry_ctx *gin.Context) {
 	stylometry_draft, stylometry_has_draft, stylometry_err := stylometry_h.Repository.DraftSample()
 	if stylometry_err != nil {
 		logrus.Error(stylometry_err)
@@ -124,28 +142,16 @@ func (stylometry_h *StylometrySampleHandler) APIGetStylometrySampleDraft(stylome
 }
 
 // POST /api/samples
-func (stylometry_h *StylometrySampleHandler) APIPostStylometrySampleDraft(stylometry_ctx *gin.Context) {
-	stylometry_text_creator := strings.TrimSpace(stylometry_ctx.PostForm("stylometry_text_creator"))
-	if stylometry_text_creator == "" {
-		stylometry_text_creator = strings.TrimSpace(stylometry_ctx.PostForm("stylometry_sample_text_creator"))
-	}
-	if stylometry_text_creator == "" {
-		stylometry_ctx.JSON(http.StatusBadRequest, gin.H{"error": "нужно передать stylometry_text_creator"})
+func (stylometry_h *SampleHandler) APIPostSampleDraft(stylometry_ctx *gin.Context) {
+	stylometry_text_creator, stylometry_description, stylometry_err := stylometrySplitDraftText(stylometry_ctx.PostForm("text"))
+	if stylometry_err != nil {
+		stylometry_ctx.JSON(http.StatusBadRequest, gin.H{"error": stylometry_err.Error()})
 		return
 	}
 
-	stylometry_description := strings.TrimSpace(stylometry_ctx.PostForm("stylometry_sample_descr"))
-	if stylometry_description == "" {
-		stylometry_description = strings.TrimSpace(stylometry_ctx.PostForm("stylometry_descr"))
-	}
-	if stylometry_description == "" {
-		stylometry_ctx.JSON(http.StatusBadRequest, gin.H{"error": "нужно передать stylometry_sample_descr"})
-		return
-	}
-
-	stylometry_image_file, stylometry_err := stylometryAPIFormFile(stylometry_ctx, "stylometry_image", "image", "stylometry_sample_image")
+	stylometry_image_file, stylometry_err := stylometryAPIFormFile(stylometry_ctx, "image")
 	if errors.Is(stylometry_err, http.ErrMissingFile) {
-		stylometry_ctx.JSON(http.StatusBadRequest, gin.H{"error": "нужно приложить файл изображения в поле stylometry_image"})
+		stylometry_ctx.JSON(http.StatusBadRequest, gin.H{"error": "нужно приложить файл изображения в поле image"})
 		return
 	}
 	if stylometry_err != nil {
@@ -154,9 +160,9 @@ func (stylometry_h *StylometrySampleHandler) APIPostStylometrySampleDraft(stylom
 		return
 	}
 
-	stylometry_video_file, stylometry_err := stylometryAPIFormFile(stylometry_ctx, "stylometry_video", "video", "stylometry_sample_video")
+	stylometry_video_file, stylometry_err := stylometryAPIFormFile(stylometry_ctx, "video")
 	if errors.Is(stylometry_err, http.ErrMissingFile) {
-		stylometry_ctx.JSON(http.StatusBadRequest, gin.H{"error": "нужно приложить файл видео в поле stylometry_video"})
+		stylometry_ctx.JSON(http.StatusBadRequest, gin.H{"error": "нужно приложить файл видео в поле video"})
 		return
 	}
 	if stylometry_err != nil {
@@ -197,7 +203,7 @@ func (stylometry_h *StylometrySampleHandler) APIPostStylometrySampleDraft(stylom
 }
 
 // PUT /api/samples/draft/publish
-func (stylometry_h *StylometrySampleHandler) APIPutStylometrySamplePublishDraft(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) APIPutSamplePublishDraft(stylometry_ctx *gin.Context) {
 	stylometry_draft, stylometry_has_draft, stylometry_err := stylometry_h.Repository.DraftSample()
 	if stylometry_err != nil {
 		logrus.Error(stylometry_err)
@@ -209,11 +215,11 @@ func (stylometry_h *StylometrySampleHandler) APIPutStylometrySamplePublishDraft(
 		return
 	}
 
-	stylometry_metrics := analysis.AnalyzeText(stylometry_draft.StylometrySampleDescr)
+	stylometry_metrics := analysis.AnalyzeText(stylometry_draft.ShortDescription)
 	stylometry_err = stylometry_h.Repository.PublishDraft(
-		stylometry_draft.StylometrySampleDescr,
-		stylometry_metrics.StylometrySampleAverageSentenceLength,
-		stylometry_metrics.StylometrySampleConjunctionFrequency,
+		stylometry_draft.ShortDescription,
+		stylometry_metrics.AverageSentenceLength,
+		stylometry_metrics.ConjunctionFrequency,
 	)
 	if stylometry_err != nil {
 		logrus.Error(stylometry_err)
@@ -221,7 +227,7 @@ func (stylometry_h *StylometrySampleHandler) APIPutStylometrySamplePublishDraft(
 		return
 	}
 
-	stylometry_published, stylometry_ok, stylometry_err := stylometry_h.Repository.SampleByID(stylometry_draft.StylometrySampleID)
+	stylometry_published, stylometry_ok, stylometry_err := stylometry_h.Repository.SampleByID(stylometry_draft.ID)
 	if stylometry_err != nil {
 		logrus.Error(stylometry_err)
 		stylometry_ctx.JSON(http.StatusInternalServerError, gin.H{"error": "черновик опубликован, но карточку не удалось перечитать"})
@@ -239,7 +245,7 @@ func (stylometry_h *StylometrySampleHandler) APIPutStylometrySamplePublishDraft(
 }
 
 // DELETE /api/samples/:id
-func (stylometry_h *StylometrySampleHandler) APIDeleteStylometrySample(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) APIDeleteSample(stylometry_ctx *gin.Context) {
 	stylometry_id, stylometry_err := strconv.ParseUint(strings.TrimSpace(stylometry_ctx.Param("id")), 10, 64)
 	if stylometry_err != nil {
 		stylometry_ctx.JSON(http.StatusBadRequest, gin.H{"error": "некорректный id карточки"})
@@ -257,7 +263,7 @@ func (stylometry_h *StylometrySampleHandler) APIDeleteStylometrySample(stylometr
 }
 
 // POST /api/samples/:id/like
-func (stylometry_h *StylometrySampleHandler) APIPostStylometrySampleLike(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) APIPostSampleLike(stylometry_ctx *gin.Context) {
 	stylometry_id, stylometry_err := strconv.ParseUint(strings.TrimSpace(stylometry_ctx.Param("id")), 10, 64)
 	if stylometry_err != nil {
 		stylometry_ctx.JSON(http.StatusBadRequest, gin.H{"error": "некорректный id карточки"})
@@ -310,15 +316,15 @@ func (stylometry_h *StylometrySampleHandler) APIPostStylometrySampleLike(stylome
 }
 
 // POST /api/users
-func (stylometry_h *StylometrySampleHandler) APIPostStylometryUserRegister(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) APIPostUserRegister(stylometry_ctx *gin.Context) {
 	var stylometry_request stylometryAPIUserRequest
 	if stylometry_err := stylometry_ctx.ShouldBind(&stylometry_request); stylometry_err != nil {
 		stylometry_ctx.JSON(http.StatusBadRequest, gin.H{"error": "нужно передать данные пользователя"})
 		return
 	}
 
-	stylometry_name := strings.TrimSpace(stylometry_request.StylometrySampleName)
-	stylometry_password := strings.TrimSpace(stylometry_request.StylometrySamplePassword)
+	stylometry_name := strings.TrimSpace(stylometry_request.Name)
+	stylometry_password := strings.TrimSpace(stylometry_request.Password)
 
 	if stylometry_name == "" {
 		stylometry_ctx.JSON(http.StatusBadRequest, gin.H{"error": "нужно передать stylometry_sample_name"})
@@ -345,7 +351,7 @@ func (stylometry_h *StylometrySampleHandler) APIPostStylometryUserRegister(stylo
 }
 
 // POST /api/auth/login
-func (stylometry_h *StylometrySampleHandler) APIPostStylometryAuthLogin(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) APIPostAuthLogin(stylometry_ctx *gin.Context) {
 	stylometry_ctx.JSON(http.StatusOK, gin.H{
 		"authenticated":           true,
 		"stylometry_current_user": stylometryAPIUserID(),
@@ -354,7 +360,7 @@ func (stylometry_h *StylometrySampleHandler) APIPostStylometryAuthLogin(stylomet
 }
 
 // POST /api/auth/logout
-func (stylometry_h *StylometrySampleHandler) APIPostStylometryAuthLogout(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) APIPostAuthLogout(stylometry_ctx *gin.Context) {
 	stylometry_ctx.JSON(http.StatusOK, gin.H{
 		"deauthenticated":         true,
 		"stylometry_auth_comment": "заглушка для лабораторной работы №4",

@@ -2,23 +2,23 @@ package stylometry_session
 
 import "sync"
 
-const stylometrySampleFixedUserID uint = 1
+const fixedUserID uint = 1
 
-type StylometrySampleCurrentUser struct {
-	StylometrySampleID uint
+type CurrentUserInfo struct {
+	ID uint
 }
 
 var (
-	stylometrySampleCurrentUser     *StylometrySampleCurrentUser
-	stylometrySampleCurrentUserOnce sync.Once
+	currentUser     *CurrentUserInfo
+	currentUserOnce sync.Once
 )
 
-func CurrentUser() *StylometrySampleCurrentUser {
-	stylometrySampleCurrentUserOnce.Do(func() {
-		stylometrySampleCurrentUser = &StylometrySampleCurrentUser{
-			StylometrySampleID: stylometrySampleFixedUserID,
+func CurrentUser() *CurrentUserInfo {
+	currentUserOnce.Do(func() {
+		currentUser = &CurrentUserInfo{
+			ID: fixedUserID,
 		}
 	})
 
-	return stylometrySampleCurrentUser
+	return currentUser
 }

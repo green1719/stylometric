@@ -180,70 +180,70 @@
         <td><span class="method">GET</span> <span class="url">/api/samples?stylometry_avg_len=12</span></td>
         <td>Возвращает список опубликованных карточек. Фильтр ограничивает среднюю длину предложения.</td>
         <td>Тело не передаётся.</td>
-        <td><code>stylometry_api.GET("/samples", APIGetStylometrySampleList)</code></td>
+        <td><code>stylometry_api.GET("/samples", APIGetSampleList)</code></td>
       </tr>
       <tr>
         <td>2</td>
         <td><span class="method">GET</span> <span class="url">/api/samples/feed</span></td>
         <td>Возвращает одну первую опубликованную карточку для ленты.</td>
         <td>Тело не передаётся.</td>
-        <td><code>stylometry_api.GET("/samples/feed", APIGetStylometrySampleFeed)</code></td>
+        <td><code>stylometry_api.GET("/samples/feed", APIGetSampleFeed)</code></td>
       </tr>
       <tr>
         <td>3</td>
         <td><span class="method">GET</span> <span class="url">/api/samples/draft</span></td>
         <td>Возвращает черновик текущего пользователя. ID в URL не нужен.</td>
         <td>Тело не передаётся.</td>
-        <td><code>stylometry_api.GET("/samples/draft", APIGetStylometrySampleDraft)</code></td>
+        <td><code>stylometry_api.GET("/samples/draft", APIGetSampleDraft)</code></td>
       </tr>
       <tr>
         <td>4</td>
         <td><span class="method">POST</span> <span class="url">/api/samples</span></td>
         <td>Создаёт или обновляет черновик, загружает изображение и видео в MinIO.</td>
         <td><code>multipart/form-data</code>, не обычный JSON.</td>
-        <td><code>stylometry_api.POST("/samples", APIPostStylometrySampleDraft)</code></td>
+        <td><code>stylometry_api.POST("/samples", APIPostSampleDraft)</code></td>
       </tr>
       <tr>
         <td>5</td>
         <td><span class="method">PUT</span> <span class="url">/api/samples/draft/publish</span></td>
         <td>Публикует черновик текущего пользователя и рассчитывает признаки стилометрии.</td>
         <td>Тело не передаётся.</td>
-        <td><code>stylometry_api.PUT("/samples/draft/publish", APIPutStylometrySamplePublishDraft)</code></td>
+        <td><code>stylometry_api.PUT("/samples/draft/publish", APIPutSamplePublishDraft)</code></td>
       </tr>
       <tr>
         <td>6</td>
         <td><span class="method">DELETE</span> <span class="url">/api/samples/24</span></td>
         <td>Логически удаляет карточку текущего пользователя: статус меняется на <code>deleted</code>.</td>
         <td>Тело не передаётся.</td>
-        <td><code>stylometry_api.DELETE("/samples/:id", APIDeleteStylometrySample)</code></td>
+        <td><code>stylometry_api.DELETE("/samples/:id", APIDeleteSample)</code></td>
       </tr>
       <tr>
         <td>7</td>
         <td><span class="method">POST</span> <span class="url">/api/samples/1/like</span></td>
         <td>Ставит или снимает лайк текущего пользователя.</td>
         <td><code>{ "stylometry_like": 1 }</code> или <code>{ "stylometry_like": 0 }</code></td>
-        <td><code>stylometry_api.POST("/samples/:id/like", APIPostStylometrySampleLike)</code></td>
+        <td><code>stylometry_api.POST("/samples/:id/like", APIPostSampleLike)</code></td>
       </tr>
       <tr>
         <td>8</td>
         <td><span class="method">POST</span> <span class="url">/api/users</span></td>
         <td>Регистрирует нового пользователя.</td>
         <td><code>{ "stylometry_sample_name": "testuser", "stylometry_sample_password": "12345" }</code></td>
-        <td><code>stylometry_api.POST("/users", APIPostStylometryUserRegister)</code></td>
+        <td><code>stylometry_api.POST("/users", APIPostUserRegister)</code></td>
       </tr>
       <tr>
         <td>9</td>
         <td><span class="method">POST</span> <span class="url">/api/auth/login</span></td>
         <td>Заглушка аутентификации для следующей лабораторной.</td>
         <td>Можно без тела.</td>
-        <td><code>stylometry_api.POST("/auth/login", APIPostStylometryAuthLogin)</code></td>
+        <td><code>stylometry_api.POST("/auth/login", APIPostAuthLogin)</code></td>
       </tr>
       <tr>
         <td>10</td>
         <td><span class="method">POST</span> <span class="url">/api/auth/logout</span></td>
         <td>Заглушка деавторизации для следующей лабораторной.</td>
         <td>Можно без тела.</td>
-        <td><code>stylometry_api.POST("/auth/logout", APIPostStylometryAuthLogout)</code></td>
+        <td><code>stylometry_api.POST("/auth/logout", APIPostAuthLogout)</code></td>
       </tr>
     </tbody>
   </table>
@@ -259,16 +259,16 @@
   <h3>Регистрация API-роутов</h3>
   <pre><code>stylometry_api := stylometry_r.Group("/api")
 {
-  stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetStylometrySampleList)
-  stylometry_api.GET("/samples/feed", stylometry_stylometryHandler.APIGetStylometrySampleFeed)
-  stylometry_api.GET("/samples/draft", stylometry_stylometryHandler.APIGetStylometrySampleDraft)
-  stylometry_api.POST("/samples", stylometry_stylometryHandler.APIPostStylometrySampleDraft)
-  stylometry_api.PUT("/samples/draft/publish", stylometry_stylometryHandler.APIPutStylometrySamplePublishDraft)
-  stylometry_api.DELETE("/samples/:id", stylometry_stylometryHandler.APIDeleteStylometrySample)
-  stylometry_api.POST("/samples/:id/like", stylometry_stylometryHandler.APIPostStylometrySampleLike)
-  stylometry_api.POST("/users", stylometry_stylometryHandler.APIPostStylometryUserRegister)
-  stylometry_api.POST("/auth/login", stylometry_stylometryHandler.APIPostStylometryAuthLogin)
-  stylometry_api.POST("/auth/logout", stylometry_stylometryHandler.APIPostStylometryAuthLogout)
+  stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetSampleList)
+  stylometry_api.GET("/samples/feed", stylometry_stylometryHandler.APIGetSampleFeed)
+  stylometry_api.GET("/samples/draft", stylometry_stylometryHandler.APIGetSampleDraft)
+  stylometry_api.POST("/samples", stylometry_stylometryHandler.APIPostSampleDraft)
+  stylometry_api.PUT("/samples/draft/publish", stylometry_stylometryHandler.APIPutSamplePublishDraft)
+  stylometry_api.DELETE("/samples/:id", stylometry_stylometryHandler.APIDeleteSample)
+  stylometry_api.POST("/samples/:id/like", stylometry_stylometryHandler.APIPostSampleLike)
+  stylometry_api.POST("/users", stylometry_stylometryHandler.APIPostUserRegister)
+  stylometry_api.POST("/auth/login", stylometry_stylometryHandler.APIPostAuthLogin)
+  stylometry_api.POST("/auth/logout", stylometry_stylometryHandler.APIPostAuthLogout)
 }</code></pre>
 
   <div class="card">
@@ -297,18 +297,18 @@ stylometry_samples, stylometry_err := stylometry_h.Repository.FilteredSamples(st
       потом добавляется условие по средней длине предложения.
     </p>
     <pre><code>stylometry_query := stylometry_repository.DB.
-  Preload("StylometrySampleLikes").
-  Where("\"StylometrySampleStatus\" = ?", model.StatusPublished)
+  Preload("Likes").
+  Where("\"Status\" = ?", model.StatusPublished)
 
 if stylometry_max_avg_len != nil {
   stylometry_query = stylometry_query.Where(
-    "\"StylometrySampleAverageSentenceLength\" &lt;= ?",
+    "\"AverageSentenceLength\" &lt;= ?",
     *stylometry_max_avg_len,
   )
 }
 
 stylometry_err := stylometry_query.
-  Order("\"StylometrySampleID\" ASC").
+  Order("\"ID\" ASC").
   Find(&amp;stylometry_samples).Error</code></pre>
   </div>
 
@@ -328,18 +328,18 @@ stylometry_sample, stylometry_ok, stylometry_err :=
       выполняется второй запрос, который возвращает первую карточку, поэтому лента зациклена.
     </p>
     <pre><code>if stylometry_id != nil &amp;&amp; stylometry_next {
-  stylometry_query = stylometry_query.Where("\"StylometrySampleID\" &gt; ?", *stylometry_id)
+  stylometry_query = stylometry_query.Where("\"ID\" &gt; ?", *stylometry_id)
 }
 
 stylometry_err := stylometry_query.
-  Order("\"StylometrySampleID\" ASC").
+  Order("\"ID\" ASC").
   First(&amp;stylometry_sample).Error
 
 if errors.Is(stylometry_err, gorm.ErrRecordNotFound) &amp;&amp; stylometry_id != nil &amp;&amp; stylometry_next {
   stylometry_err = stylometry_repository.DB.
-    Preload("StylometrySampleLikes").
-    Where("\"StylometrySampleStatus\" = ?", model.StatusPublished).
-    Order("\"StylometrySampleID\" ASC").
+    Preload("Likes").
+    Where("\"Status\" = ?", model.StatusPublished).
+    Order("\"ID\" ASC").
     First(&amp;stylometry_sample).Error
 }</code></pre>
   </div>
@@ -360,8 +360,8 @@ if !stylometry_has_draft {
   return
 }</code></pre>
     <pre><code>stylometry_err := stylometry_repository.DB.
-  Preload("StylometrySampleLikes").
-  Where("\"StylometrySampleCreatorID\" = ? AND \"StylometrySampleStatus\" = ?",
+  Preload("Likes").
+  Where("\"CreatorID\" = ? AND \"Status\" = ?",
     stylometryCurrentUserID(),
     model.StatusDraft,
   ).
@@ -402,26 +402,26 @@ stylometry_metrics := analysis.AnalyzeText(stylometry_text)
 
 if stylometry_found {
   stylometry_updates := map[string]interface{}{
-    "StylometrySampleTextCreator":           stylometry_text_creator,
-    "StylometrySampleShortDescription":      stylometry_text,
-    "StylometrySampleImageURL":              stylometry_image_url,
-    "StylometrySampleVideoURL":              stylometry_video_url,
-    "StylometrySampleAverageSentenceLength": stylometry_metrics.StylometrySampleAverageSentenceLength,
-    "StylometrySampleConjunctionFrequency":  stylometry_metrics.StylometrySampleConjunctionFrequency,
+    "TextCreator":           stylometry_text_creator,
+    "ShortDescription":      stylometry_text,
+    "ImageURL":              stylometry_image_url,
+    "VideoURL":              stylometry_video_url,
+    "AverageSentenceLength": stylometry_metrics.AverageSentenceLength,
+    "ConjunctionFrequency":  stylometry_metrics.ConjunctionFrequency,
   }
-  stylometry_err = stylometry_repository.DB.Model(&amp;model.StylometrySampleTextSample{}).
-    Where("\"StylometrySampleID\" = ?", stylometry_existing.StylometrySampleID).
+  stylometry_err = stylometry_repository.DB.Model(&amp;model.Sample{}).
+    Where("\"ID\" = ?", stylometry_existing.ID).
     Updates(stylometry_updates).Error
 }</code></pre>
-    <pre><code>stylometry_sample := model.StylometrySampleTextSample{
-  StylometrySampleTextCreator:           stylometry_text_creator,
-  StylometrySampleDescr:                 stylometry_text,
-  StylometrySampleStatus:                model.StatusDraft,
-  StylometrySampleImageURL:              stylometry_image_url,
-  StylometrySampleVideoURL:              stylometry_video_url,
-  StylometrySampleAverageSentenceLength: stylometry_metrics.StylometrySampleAverageSentenceLength,
-  StylometrySampleConjunctionFrequency:  stylometry_metrics.StylometrySampleConjunctionFrequency,
-  StylometrySampleCreatorID:             stylometryCurrentUserID(),
+    <pre><code>stylometry_sample := model.Sample{
+  TextCreator:           stylometry_text_creator,
+  ShortDescription:                 stylometry_text,
+  Status:                model.StatusDraft,
+  ImageURL:              stylometry_image_url,
+  VideoURL:              stylometry_video_url,
+  AverageSentenceLength: stylometry_metrics.AverageSentenceLength,
+  ConjunctionFrequency:  stylometry_metrics.ConjunctionFrequency,
+  CreatorID:             stylometryCurrentUserID(),
 }
 stylometry_err = stylometry_repository.DB.Create(&amp;stylometry_sample).Error</code></pre>
   </div>
@@ -433,30 +433,30 @@ stylometry_err = stylometry_repository.DB.Create(&amp;stylometry_sample).Error</
       в repository.
     </p>
     <pre><code>stylometry_draft, stylometry_has_draft, stylometry_err := stylometry_h.Repository.DraftSample()
-stylometry_metrics := analysis.AnalyzeText(stylometry_draft.StylometrySampleDescr)
+stylometry_metrics := analysis.AnalyzeText(stylometry_draft.ShortDescription)
 
 stylometry_err = stylometry_h.Repository.PublishDraft(
-  stylometry_draft.StylometrySampleDescr,
-  stylometry_metrics.StylometrySampleAverageSentenceLength,
-  stylometry_metrics.StylometrySampleConjunctionFrequency,
+  stylometry_draft.ShortDescription,
+  stylometry_metrics.AverageSentenceLength,
+  stylometry_metrics.ConjunctionFrequency,
 )</code></pre>
     <p>
       Repository меняет статус только у черновика текущего пользователя. Здесь же заполняется
-      <code>StylometrySampleUpdatedAt</code>.
+      <code>UpdatedAt</code>.
     </p>
     <pre><code>stylometry_updated_at := time.Now()
 stylometry_result := stylometry_repository.DB.
-  Model(&amp;model.StylometrySampleTextSample{}).
-  Where("\"StylometrySampleCreatorID\" = ? AND \"StylometrySampleStatus\" = ?",
+  Model(&amp;model.Sample{}).
+  Where("\"CreatorID\" = ? AND \"Status\" = ?",
     stylometryCurrentUserID(),
     model.StatusDraft,
   ).
   Updates(map[string]interface{}{
-    "StylometrySampleShortDescription":      stylometry_description,
-    "StylometrySampleAverageSentenceLength": stylometry_avg_len,
-    "StylometrySampleConjunctionFrequency":  stylometry_conj_freq,
-    "StylometrySampleStatus":                model.StatusPublished,
-    "StylometrySampleUpdatedAt":             &amp;stylometry_updated_at,
+    "ShortDescription":      stylometry_description,
+    "AverageSentenceLength": stylometry_avg_len,
+    "ConjunctionFrequency":  stylometry_conj_freq,
+    "Status":                model.StatusPublished,
+    "UpdatedAt":             &amp;stylometry_updated_at,
   })</code></pre>
   </div>
 
@@ -474,11 +474,11 @@ stylometry_err = stylometry_h.Repository.DeleteSampleSQL(uint(stylometry_id))</c
 
 stylometry_rows, stylometry_err := stylometry_sql_db.QueryContext(
   context.Background(),
-  "UPDATE \"StylometrySampleTextSamples\" SET \"StylometrySampleStatus\" = $1
-   WHERE \"StylometrySampleID\" = $2
-     AND \"StylometrySampleStatus\" &lt;&gt; $3
-     AND \"StylometrySampleCreatorID\" = $4
-   RETURNING \"StylometrySampleID\"",
+  "UPDATE \"StylometrySamples\" SET \"Status\" = $1
+   WHERE \"ID\" = $2
+     AND \"Status\" &lt;&gt; $3
+     AND \"CreatorID\" = $4
+   RETURNING \"ID\"",
   string(model.StatusDeleted),
   stylometry_id,
   string(model.StatusDeleted),
@@ -520,15 +520,15 @@ stylometry_ok, stylometry_err :=
       В repository сначала проверяется, что карточка существует и опубликована. Потом создаётся запись в таблице лайков
       или удаляется существующая запись.
     </p>
-    <pre><code>stylometry_err := stylometry_repository.DB.Model(&amp;model.StylometrySampleTextSample{}).
-  Where("\"StylometrySampleID\" = ? AND \"StylometrySampleStatus\" = ?",
+    <pre><code>stylometry_err := stylometry_repository.DB.Model(&amp;model.Sample{}).
+  Where("\"ID\" = ? AND \"Status\" = ?",
     stylometry_id,
     model.StatusPublished,
   ).
   Count(&amp;stylometry_count).Error</code></pre>
-    <pre><code>stylometry_like := model.StylometrySampleLike{
-  StylometrySampleUserID:       stylometryCurrentUserID(),
-  StylometrySampleTextSampleID: stylometry_id,
+    <pre><code>stylometry_like := model.Like{
+  UserID:       stylometryCurrentUserID(),
+  SampleID: stylometry_id,
 }
 
 if stylometry_like_value == 1 {
@@ -538,11 +538,11 @@ if stylometry_like_value == 1 {
   return true, stylometry_err
 }</code></pre>
     <pre><code>stylometry_err = stylometry_repository.DB.
-  Where("\"StylometrySampleUserID\" = ? AND \"StylometrySampleTextSampleID\" = ?",
+  Where("\"UserID\" = ? AND \"SampleID\" = ?",
     stylometryCurrentUserID(),
     stylometry_id,
   ).
-  Delete(&amp;model.StylometrySampleLike{}).Error</code></pre>
+  Delete(&amp;model.Like{}).Error</code></pre>
   </div>
 
   <div class="card">
@@ -552,11 +552,11 @@ if stylometry_like_value == 1 {
       Если пароль не передан, подставляется значение по умолчанию.
     </p>
     <pre><code>type stylometryAPIUserRequest struct {
-  StylometrySampleName     string `form:"stylometry_sample_name" json:"stylometry_sample_name"`
-  StylometrySamplePassword string `form:"stylometry_sample_password" json:"stylometry_sample_password"`
+  Name     string `form:"stylometry_sample_name" json:"stylometry_sample_name"`
+  Password string `form:"stylometry_sample_password" json:"stylometry_sample_password"`
 }</code></pre>
-    <pre><code>stylometry_name := strings.TrimSpace(stylometry_request.StylometrySampleName)
-stylometry_password := strings.TrimSpace(stylometry_request.StylometrySamplePassword)
+    <pre><code>stylometry_name := strings.TrimSpace(stylometry_request.Name)
+stylometry_password := strings.TrimSpace(stylometry_request.Password)
 
 if stylometry_password == "" {
   stylometry_password = "stylometry123"
@@ -565,9 +565,9 @@ if stylometry_password == "" {
 stylometry_user, stylometry_err :=
   stylometry_h.Repository.RegisterUser(stylometry_name, stylometry_password)</code></pre>
     <p>В repository пользователь создаётся через GORM <code>Create</code>.</p>
-    <pre><code>stylometry_user := model.StylometrySampleUser{
-  StylometrySampleName:     stylometry_name,
-  StylometrySamplePassword: stylometry_password,
+    <pre><code>stylometry_user := model.User{
+  Name:     stylometry_name,
+  Password: stylometry_password,
 }
 stylometry_err := stylometry_repository.DB.Create(&amp;stylometry_user).Error</code></pre>
   </div>
@@ -578,7 +578,7 @@ stylometry_err := stylometry_repository.DB.Create(&amp;stylometry_user).Error</c
       Эти методы пока не выполняют настоящую авторизацию. Они нужны для структуры API и следующей лабораторной.
       Сейчас они просто возвращают JSON-ответ.
     </p>
-    <pre><code>func (stylometry_h *StylometrySampleHandler) APIPostStylometryAuthLogin(stylometry_ctx *gin.Context) {
+    <pre><code>func (stylometry_h *SampleHandler) APIPostAuthLogin(stylometry_ctx *gin.Context) {
   stylometry_ctx.JSON(http.StatusOK, gin.H{
     "authenticated":           true,
     "stylometry_current_user": stylometryAPIUserID(),
@@ -586,7 +586,7 @@ stylometry_err := stylometry_repository.DB.Create(&amp;stylometry_user).Error</c
   })
 }
 
-func (stylometry_h *StylometrySampleHandler) APIPostStylometryAuthLogout(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) APIPostAuthLogout(stylometry_ctx *gin.Context) {
   stylometry_ctx.JSON(http.StatusOK, gin.H{
     "deauthenticated":         true,
     "stylometry_auth_comment": "заглушка для лабораторной работы №4",
@@ -601,10 +601,10 @@ func (stylometry_h *StylometrySampleHandler) APIPostStylometryAuthLogout(stylome
   </p>
   <pre><code>const stylometrySampleFixedUserID uint = 1
 
-func CurrentUser() *StylometrySampleCurrentUser {
+func CurrentUser() *CurrentUserInfo {
   stylometrySampleCurrentUserOnce.Do(func() {
-    stylometrySampleCurrentUser = &amp;StylometrySampleCurrentUser{
-      StylometrySampleID: stylometrySampleFixedUserID,
+    stylometrySampleCurrentUser = &amp;CurrentUserInfo{
+      ID: stylometrySampleFixedUserID,
     }
   })
 
@@ -616,16 +616,16 @@ func CurrentUser() *StylometrySampleCurrentUser {
     После чтения модели из БД handler отдаёт не саму модель GORM, а DTO из serializer.
     Поэтому клиент получает только нужные поля, а внутренние связи и статус не выводятся напрямую.
   </p>
-  <pre><code>return StylometrySampleResponse{
-  StylometrySampleID:                    stylometry_sample.StylometrySampleID,
-  StylometrySampleTextCreator:           stylometry_sample.StylometrySampleTextCreator,
-  StylometrySampleDescr:                 stylometry_sample.StylometrySampleDescr,
-  StylometrySampleImageURL:              stylometry_sample.StylometrySampleImageURL,
-  StylometrySampleVideoURL:              stylometry_sample.StylometrySampleVideoURL,
-  StylometrySampleAverageSentenceLength: stylometry_sample.StylometrySampleAverageSentenceLength,
-  StylometrySampleConjunctionFrequency:  stylometry_sample.StylometrySampleConjunctionFrequency,
-  StylometrySampleLikesCount:            len(stylometry_sample.StylometrySampleLikes),
-  StylometrySampleIsCurrentUserCreator:  stylometry_is_creator,
+  <pre><code>return SampleResponseDTO{
+  ID:                    stylometry_sample.ID,
+  TextCreator:           stylometry_sample.TextCreator,
+  ShortDescription:                 stylometry_sample.ShortDescription,
+  ImageURL:              stylometry_sample.ImageURL,
+  VideoURL:              stylometry_sample.VideoURL,
+  AverageSentenceLength: stylometry_sample.AverageSentenceLength,
+  ConjunctionFrequency:  stylometry_sample.ConjunctionFrequency,
+  LikesCount:            len(stylometry_sample.Likes),
+  IsCurrentUserCreator:  stylometry_is_creator,
 }</code></pre>
 
   <h2>3. Примеры запросов и JSON</h2>
@@ -653,12 +653,12 @@ func CurrentUser() *StylometrySampleCurrentUser {
 }</code></pre>
     <p><strong>Код фильтрации:</strong></p>
     <pre><code>stylometry_query := stylometry_repository.DB.
-  Preload("StylometrySampleLikes").
-  Where("\"StylometrySampleStatus\" = ?", model.StatusPublished)
+  Preload("Likes").
+  Where("\"Status\" = ?", model.StatusPublished)
 
 if stylometry_max_avg_len != nil {
   stylometry_query = stylometry_query.Where(
-    "\"StylometrySampleAverageSentenceLength\" &lt;= ?",
+    "\"AverageSentenceLength\" &lt;= ?",
     *stylometry_max_avg_len,
   )
 }</code></pre>
@@ -677,7 +677,7 @@ if stylometry_max_avg_len != nil {
 }</code></pre>
     <p><strong>Код ленты:</strong></p>
     <pre><code>stylometry_err := stylometry_query.
-  Order("\"StylometrySampleID\" ASC").
+  Order("\"ID\" ASC").
   First(&amp;stylometry_sample).Error</code></pre>
   </div>
 
@@ -687,16 +687,16 @@ if stylometry_max_avg_len != nil {
     <p>Если следующей опубликованной карточки нет, сервер возвращает первую опубликованную карточку, то есть лента работает циклически.</p>
     <pre><code>if stylometry_id != nil &amp;&amp; stylometry_next {
   stylometry_query = stylometry_query.Where(
-    "\"StylometrySampleID\" &gt; ?",
+    "\"ID\" &gt; ?",
     *stylometry_id,
   )
 }
 
 if errors.Is(stylometry_err, gorm.ErrRecordNotFound) &amp;&amp; stylometry_id != nil &amp;&amp; stylometry_next {
   stylometry_err = stylometry_repository.DB.
-    Preload("StylometrySampleLikes").
-    Where("\"StylometrySampleStatus\" = ?", model.StatusPublished).
-    Order("\"StylometrySampleID\" ASC").
+    Preload("Likes").
+    Where("\"Status\" = ?", model.StatusPublished).
+    Order("\"ID\" ASC").
     First(&amp;stylometry_sample).Error
 }</code></pre>
   </div>
@@ -714,8 +714,8 @@ if errors.Is(stylometry_err, gorm.ErrRecordNotFound) &amp;&amp; stylometry_id !=
 }</code></pre>
     <p><strong>Код:</strong></p>
     <pre><code>stylometry_err := stylometry_repository.DB.
-  Preload("StylometrySampleLikes").
-  Where("\"StylometrySampleCreatorID\" = ? AND \"StylometrySampleStatus\" = ?",
+  Preload("Likes").
+  Where("\"CreatorID\" = ? AND \"Status\" = ?",
     stylometryCurrentUserID(),
     model.StatusDraft,
   ).
@@ -767,11 +767,11 @@ stylometry_video_url, stylometry_err := media.UploadFile(
   }
 }</code></pre>
     <p><strong>Код публикации:</strong></p>
-    <pre><code>stylometry_metrics := analysis.AnalyzeText(stylometry_draft.StylometrySampleDescr)
+    <pre><code>stylometry_metrics := analysis.AnalyzeText(stylometry_draft.ShortDescription)
 stylometry_err = stylometry_h.Repository.PublishDraft(
-  stylometry_draft.StylometrySampleDescr,
-  stylometry_metrics.StylometrySampleAverageSentenceLength,
-  stylometry_metrics.StylometrySampleConjunctionFrequency,
+  stylometry_draft.ShortDescription,
+  stylometry_metrics.AverageSentenceLength,
+  stylometry_metrics.ConjunctionFrequency,
 )</code></pre>
   </div>
 
@@ -785,11 +785,11 @@ stylometry_err = stylometry_h.Repository.PublishDraft(
     <p><strong>Код SQL-удаления через курсор:</strong></p>
     <pre><code>stylometry_rows, stylometry_err := stylometry_sql_db.QueryContext(
   context.Background(),
-  "UPDATE \"StylometrySampleTextSamples\" SET \"StylometrySampleStatus\" = $1
-   WHERE \"StylometrySampleID\" = $2
-     AND \"StylometrySampleStatus\" &lt;&gt; $3
-     AND \"StylometrySampleCreatorID\" = $4
-   RETURNING \"StylometrySampleID\"",
+  "UPDATE \"StylometrySamples\" SET \"Status\" = $1
+   WHERE \"ID\" = $2
+     AND \"Status\" &lt;&gt; $3
+     AND \"CreatorID\" = $4
+   RETURNING \"ID\"",
   string(model.StatusDeleted),
   stylometry_id,
   string(model.StatusDeleted),
@@ -813,9 +813,9 @@ stylometry_err = stylometry_h.Repository.PublishDraft(
   }
 }</code></pre>
     <p><strong>Код регистрации:</strong></p>
-    <pre><code>stylometry_user := model.StylometrySampleUser{
-  StylometrySampleName:     stylometry_name,
-  StylometrySamplePassword: stylometry_password,
+    <pre><code>stylometry_user := model.User{
+  Name:     stylometry_name,
+  Password: stylometry_password,
 }
 stylometry_err := stylometry_repository.DB.Create(&amp;stylometry_user).Error</code></pre>
   </div>
@@ -850,19 +850,19 @@ stylometry_err := stylometry_repository.DB.Create(&amp;stylometry_user).Error</c
 }</code></pre>
 
   <p><strong>Модель лайка:</strong></p>
-  <pre><code>type StylometrySampleLike struct {
-  StylometrySampleLikeID       uint `gorm:"primaryKey;column:StylometrySampleLikeID"`
-  StylometrySampleUserID       uint `gorm:"column:StylometrySampleUserID;not null"`
-  StylometrySampleTextSampleID uint `gorm:"column:StylometrySampleTextSampleID;not null"`
+  <pre><code>type Like struct {
+  ID       uint `gorm:"primaryKey;column:ID"`
+  UserID       uint `gorm:"column:UserID;not null"`
+  SampleID uint `gorm:"column:SampleID;not null"`
 }</code></pre>
 
   <p><strong>Пользователь берётся через singleton:</strong></p>
   <pre><code>const stylometrySampleFixedUserID uint = 1
 
-func CurrentUser() *StylometrySampleCurrentUser {
+func CurrentUser() *CurrentUserInfo {
   stylometrySampleCurrentUserOnce.Do(func() {
-    stylometrySampleCurrentUser = &amp;StylometrySampleCurrentUser{
-      StylometrySampleID: stylometrySampleFixedUserID,
+    stylometrySampleCurrentUser = &amp;CurrentUserInfo{
+      ID: stylometrySampleFixedUserID,
     }
   })
 
@@ -884,11 +884,11 @@ func CurrentUser() *StylometrySampleCurrentUser {
 }
 
 stylometry_err = stylometry_repository.DB.
-  Where("\"StylometrySampleUserID\" = ? AND \"StylometrySampleTextSampleID\" = ?",
+  Where("\"UserID\" = ? AND \"SampleID\" = ?",
     stylometryCurrentUserID(),
     stylometry_id,
   ).
-  Delete(&amp;model.StylometrySampleLike{}).Error</code></pre>
+  Delete(&amp;model.Like{}).Error</code></pre>
 
   <p>
     <code>OnConflict{DoNothing: true}</code> нужен, чтобы повторный лайк от того же пользователя не создавал дубль.
@@ -941,8 +941,8 @@ HTTP внутри TLS
     </p>
     <pre><code>stylometry_api := stylometry_r.Group("/api")
 {
-  stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetStylometrySampleList)
-  stylometry_api.POST("/samples", stylometry_stylometryHandler.APIPostStylometrySampleDraft)
+  stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetSampleList)
+  stylometry_api.POST("/samples", stylometry_stylometryHandler.APIPostSampleDraft)
 }</code></pre>
   </div>
 
@@ -989,10 +989,10 @@ Accept: application/json</code></pre>
       <code>PUT</code> — полностью изменить состояние ресурса, <code>DELETE</code> — удалить ресурс.
       В моей лабораторной используются все эти методы.
     </p>
-    <pre><code>stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetStylometrySampleList)
-stylometry_api.POST("/samples", stylometry_stylometryHandler.APIPostStylometrySampleDraft)
-stylometry_api.PUT("/samples/draft/publish", stylometry_stylometryHandler.APIPutStylometrySamplePublishDraft)
-stylometry_api.DELETE("/samples/:id", stylometry_stylometryHandler.APIDeleteStylometrySample)</code></pre>
+    <pre><code>stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetSampleList)
+stylometry_api.POST("/samples", stylometry_stylometryHandler.APIPostSampleDraft)
+stylometry_api.PUT("/samples/draft/publish", stylometry_stylometryHandler.APIPutSamplePublishDraft)
+stylometry_api.DELETE("/samples/:id", stylometry_stylometryHandler.APIDeleteSample)</code></pre>
   </div>
 
   <div class="card">
@@ -1044,7 +1044,7 @@ https://example.ru/api/samples       // публикация с TLS-сертиф
         <tr><td>1</td><td>Физический</td><td>Кабель, радиосигнал Wi-Fi</td></tr>
       </tbody>
     </table>
-    <pre><code>stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetStylometrySampleList)</code></pre>
+    <pre><code>stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetSampleList)</code></pre>
   </div>
 </main>
 </body>

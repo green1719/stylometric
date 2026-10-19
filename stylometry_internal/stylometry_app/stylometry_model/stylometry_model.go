@@ -2,69 +2,69 @@ package model
 
 import "time"
 
-// StylometrySampleStatus — отдельный строковый тип для статуса карточки.
-type StylometrySampleStatus string
+// Status describes the lifecycle state of a sample.
+type Status string
 
 const (
-	StatusDraft     StylometrySampleStatus = "draft"
-	StatusPublished StylometrySampleStatus = "published"
-	StatusDeleted   StylometrySampleStatus = "deleted"
+	StatusDraft     Status = "draft"
+	StatusPublished Status = "published"
+	StatusDeleted   Status = "deleted"
 )
 
-// StylometrySampleUser — модель пользователя приложения.
-type StylometrySampleUser struct {
-	StylometrySampleID       uint   `gorm:"primaryKey;column:StylometrySampleID"`
-	StylometrySampleName     string `gorm:"column:StylometrySampleName;size:120;not null"`
-	StylometrySamplePassword string `gorm:"column:StylometrySamplePassword;size:255;not null;default:'stylometry123'"`
+// User is an application user.
+type User struct {
+	ID       uint   `gorm:"primaryKey;column:ID"`
+	Name     string `gorm:"column:Name;size:120;not null"`
+	Password string `gorm:"column:Password;size:255;not null;default:'stylometry123'"`
 }
 
-// TableName задаёт точное имя таблицы пользователей.
-func (StylometrySampleUser) TableName() string {
-	return "StylometrySampleUsers"
+// TableName returns the exact PostgreSQL table name for users.
+func (User) TableName() string {
+	return "Users"
 }
 
-// StylometrySampleTextSample: карточка эталонного текста.
-type StylometrySampleTextSample struct {
-	StylometrySampleID                    uint                   `gorm:"primaryKey;column:StylometrySampleID"`
-	StylometrySampleTextCreator           string                 `gorm:"column:StylometrySampleTextCreator;size:160;not null"`
-	StylometrySampleDescr                 string                 `gorm:"column:StylometrySampleShortDescription;size:800"`
-	StylometrySampleStatus                StylometrySampleStatus `gorm:"column:StylometrySampleStatus;type:varchar(20);not null;default:'draft';index"`
-	StylometrySampleImageURL              string                 `gorm:"column:StylometrySampleImageURL;size:500;not null;default:'/stylometry_static/stylometry_default_image.svg'"`
-	StylometrySampleVideoURL              string                 `gorm:"column:StylometrySampleVideoURL;size:500;not null;default:'/stylometry_static/stylometry_default_video.svg'"`
-	StylometrySampleAverageSentenceLength float64                `gorm:"column:StylometrySampleAverageSentenceLength"`
-	StylometrySampleConjunctionFrequency  float64                `gorm:"column:StylometrySampleConjunctionFrequency"`
-	StylometrySampleCreatedAt             *time.Time             `gorm:"column:StylometrySampleCreatedAt;autoCreateTime"`
-	StylometrySampleUpdatedAt             *time.Time             `gorm:"column:StylometrySampleUpdatedAt"`
-	StylometrySampleCreatorID             uint                   `gorm:"column:StylometrySampleCreatorID;not null;index"`
-	StylometrySampleCreator               StylometrySampleUser   `gorm:"foreignKey:StylometrySampleCreatorID;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
-	StylometrySampleLikes                 []StylometrySampleLike `gorm:"foreignKey:StylometrySampleTextSampleID"`
+// Sample is a text sample used for stylometric analysis.
+type Sample struct {
+	ID                    uint       `gorm:"primaryKey;column:ID"`
+	TextCreator           string     `gorm:"column:TextCreator;size:160;not null"`
+	ShortDescription      string     `gorm:"column:ShortDescription;size:800"`
+	Status                Status     `gorm:"column:Status;type:varchar(20);not null;default:'draft';index"`
+	ImageURL              string     `gorm:"column:ImageURL;size:500;not null;default:'/stylometry_static/stylometry_default_image.svg'"`
+	VideoURL              string     `gorm:"column:VideoURL;size:500;not null;default:'/stylometry_static/stylometry_default_video.svg'"`
+	AverageSentenceLength float64    `gorm:"column:AverageSentenceLength"`
+	ConjunctionFrequency  float64    `gorm:"column:ConjunctionFrequency"`
+	CreatedAt             *time.Time `gorm:"column:CreatedAt;autoCreateTime"`
+	UpdatedAt             *time.Time `gorm:"column:UpdatedAt"`
+	CreatorID             uint       `gorm:"column:CreatorID;not null;index"`
+	Creator               User       `gorm:"foreignKey:CreatorID;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
+	Likes                 []Like     `gorm:"foreignKey:SampleID"`
 }
 
-// TableName задаёт точное имя таблицы карточек.
-func (StylometrySampleTextSample) TableName() string {
-	return "StylometrySampleTextSamples"
+// TableName returns the exact PostgreSQL table name for text samples.
+func (Sample) TableName() string {
+	return "StylometrySamples"
 }
 
-// LikesCount возвращает количество лайков у карточки.
-func (stylometry_sample StylometrySampleTextSample) LikesCount() int {
-	return len(stylometry_sample.StylometrySampleLikes)
+// LikesCount returns the number of likes attached to a sample.
+func (sample Sample) LikesCount() int {
+	return len(sample.Likes)
 }
 
-// IsDraft сообщает, является ли карточка черновиком.
-func (stylometry_sample StylometrySampleTextSample) IsDraft() bool {
-	return stylometry_sample.StylometrySampleStatus == StatusDraft
+// IsDraft reports whether a sample is a draft.
+func (sample Sample) IsDraft() bool {
+	return sample.Status == StatusDraft
 }
 
-// StylometrySampleLike — модель лайка, связь многие-ко-многим пользователь-карточка.
-type StylometrySampleLike struct {
-	StylometrySampleLikeID       uint                       `gorm:"primaryKey;column:StylometrySampleLikeID"`
-	StylometrySampleUserID       uint                       `gorm:"column:StylometrySampleUserID;not null"`
-	StylometrySampleTextSampleID uint                       `gorm:"column:StylometrySampleTextSampleID;not null"`
-	StylometrySampleUser         StylometrySampleUser       `gorm:"foreignKey:StylometrySampleUserID;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
-	StylometrySampleTextSample   StylometrySampleTextSample `gorm:"foreignKey:StylometrySampleTextSampleID;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
+// Like is the many-to-many link between a user and a sample.
+type Like struct {
+	ID       uint   `gorm:"primaryKey;column:ID"`
+	UserID   uint   `gorm:"column:UserID;not null"`
+	SampleID uint   `gorm:"column:SampleID;not null"`
+	User     User   `gorm:"foreignKey:UserID;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
+	Sample   Sample `gorm:"foreignKey:SampleID;constraint:OnUpdate:RESTRICT,OnDelete:RESTRICT"`
 }
 
-// TableName задаёт точное имя таблицы лайков.
-func (StylometrySampleLike) TableName() string {
-	return "StylometrySampleLikes"
+// TableName returns the exact PostgreSQL table name for likes.
+func (Like) TableName() string {
+	return "Likes"
 }

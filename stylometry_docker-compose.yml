@@ -70,6 +70,7 @@ services:
       DB_USER: ${DB_USER:-stylometry_user}
       DB_PASS: ${DB_PASS:-stylometry_password}
       DB_NAME: ${DB_NAME:-stylometry_db}
+      ENABLE_FRONTEND: ${ENABLE_FRONTEND:-false}
     depends_on:
       postgres:
         condition: service_healthy

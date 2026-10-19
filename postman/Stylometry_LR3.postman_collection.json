@@ -1,0 +1,149 @@
+{
+  "info": {
+    "_postman_id": "b2e60f3b-4e78-4658-a76e-15c7dc56a2ce",
+    "name": "Stylometry API - Лабораторная работа 3",
+    "description": "Запросы расположены в порядке показа из лабораторной работы №3. Перед запросами, изменяющими данные, при необходимости измените переменные sampleId и newUserName.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8080"
+    },
+    {
+      "key": "sampleId",
+      "value": "1"
+    },
+    {
+      "key": "newUserName",
+      "value": "postman_user"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Список опубликованных образцов",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/samples",
+        "description": "Возвращает опубликованные текстовые образцы."
+      }
+    },
+    {
+      "name": "02 - Список образцов с фильтром",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/samples?stylometry_avg_len=15",
+        "description": "Фильтр по максимальной средней длине предложения."
+      }
+    },
+    {
+      "name": "03 - Создание черновика с медиа",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": "/Users/ruslangadzhiev/Desktop/Go/stylometry_project/postman_uploads/stylometry_postman_image.jpg"
+            },
+            {
+              "key": "video",
+              "type": "file",
+              "src": "/Users/ruslangadzhiev/Desktop/Go/stylometry_project/postman_uploads/stylometry_postman_video_source.gif"
+            },
+            {
+              "key": "text",
+              "value": "Проверочный автор\nПроверочный текстовый отрывок для создания черновика.",
+              "type": "text"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/samples",
+        "description": "Перед отправкой выберите изображение и короткое видео. В поле text первая строка является автором, остальные строки - текстовым отрывком."
+      }
+    },
+    {
+      "name": "04 - Получение черновика текущего пользователя",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/samples/draft",
+        "description": "ID не передаётся: черновик определяется для фиксированного текущего пользователя."
+      }
+    },
+    {
+      "name": "05 - Публикация черновика",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": "{{baseUrl}}/api/samples/draft/publish",
+        "description": "Тело запроса не требуется."
+      }
+    },
+    {
+      "name": "06 - Первый элемент ленты",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/samples/feed",
+        "description": "Возвращает один первый опубликованный текстовый образец."
+      }
+    },
+    {
+      "name": "07 - Следующий элемент ленты",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/samples/feed?stylometry_id={{sampleId}}&next=true",
+        "description": "Подставьте ID текущего элемента ленты в переменную sampleId. Если следующего нет, лента возвращается к первой карточке."
+      }
+    },
+    {
+      "name": "08 - Проверка результата лайка",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/samples/feed?stylometry_id={{sampleId}}",
+        "description": "Проверяет результат постановки лайка: поле is_liked равно 1, когда лайк текущего пользователя существует, и 0, когда его нет."
+      }
+    },
+    {
+      "name": "09 - Мягкое удаление образца",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/api/samples/{{sampleId}}",
+        "description": "Меняет статус образца на deleted через SQL-курсор. Используйте ID карточки текущего пользователя."
+      }
+    },
+    {
+      "name": "10 - Регистрация пользователя",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stylometry_sample_name\": \"{{newUserName}}\",\n  \"stylometry_sample_password\": \"stylometry123\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/users",
+        "description": "Перед повторной регистрацией измените переменную newUserName, чтобы имя было уникальным."
+      }
+    }
+  ]
+}

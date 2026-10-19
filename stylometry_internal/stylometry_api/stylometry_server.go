@@ -2,6 +2,8 @@ package api
 
 import (
 	"log"
+	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -14,44 +16,50 @@ import (
 func StartServer() {
 	log.Println("StylometrySample application start!")
 
-	stylometry_db, stylometry_err := database.NewDatabase()
-	if stylometry_err != nil {
-		logrus.Fatal("ошибка подключения к базе данных стилометрии: ", stylometry_err)
+	db, err := database.NewDatabase()
+	if err != nil {
+		logrus.Fatal("ошибка подключения к базе данных стилометрии: ", err)
 	}
-	stylometry_stylometryRepo := repository.NewStylometrySampleRepository(stylometry_db)
-	stylometry_stylometryHandler := handler.NewStylometrySampleHandler(stylometry_stylometryRepo)
+	repo := repository.NewRepository(db)
+	sampleHandler := handler.NewSampleHandler(repo)
 
-	stylometry_r := gin.Default()
-	stylometry_r.LoadHTMLGlob("stylometry_templates/*")
-	stylometry_r.Static("/stylometry_static", "./stylometry_static")
+	router := gin.Default()
+	if stylometryFrontendEnabled() {
+		router.LoadHTMLGlob("stylometry_templates/*")
+		router.Static("/stylometry_static", "./stylometry_static")
 
-	stylometry_r.GET("/samples", func(stylometry_ctx *gin.Context) {
-		stylometry_ctx.Redirect(302, "/samples/feed")
-	})
-	stylometry_r.GET("/samples/feed", stylometry_stylometryHandler.GetStylometrySampleFeed)
-	stylometry_r.GET("/samples/draft", stylometry_stylometryHandler.GetStylometrySampleDraft)
-	stylometry_r.GET("/samples/grid", stylometry_stylometryHandler.GetStylometrySampleGrid)
-	stylometry_r.POST("/samples/draft", stylometry_stylometryHandler.PostStylometrySampleCreateDraft)
-	stylometry_r.POST("/samples/draft/publish", stylometry_stylometryHandler.PostStylometrySamplePublishDraft)
-	stylometry_r.POST("/samples/delete", stylometry_stylometryHandler.PostStylometrySampleDelete)
+		router.GET("/samples", func(stylometry_ctx *gin.Context) {
+			stylometry_ctx.Redirect(302, "/samples/feed")
+		})
+		router.GET("/samples/feed", sampleHandler.GetSampleFeed)
+		router.GET("/samples/draft", sampleHandler.GetSampleDraft)
+		router.GET("/samples/grid", sampleHandler.GetSampleGrid)
+		router.POST("/samples/draft", sampleHandler.PostSampleCreateDraft)
+		router.POST("/samples/draft/publish", sampleHandler.PostSamplePublishDraft)
+		router.POST("/samples/delete", sampleHandler.PostSampleDelete)
+	}
 
 	//3 labaa
-	stylometry_api := stylometry_r.Group("/api")
+	apiRoutes := router.Group("/api")
 	{
-		stylometry_api.GET("/samples", stylometry_stylometryHandler.APIGetStylometrySampleList)
-		stylometry_api.GET("/samples/feed", stylometry_stylometryHandler.APIGetStylometrySampleFeed)
-		stylometry_api.GET("/samples/draft", stylometry_stylometryHandler.APIGetStylometrySampleDraft)
-		stylometry_api.POST("/samples", stylometry_stylometryHandler.APIPostStylometrySampleDraft)
-		stylometry_api.PUT("/samples/draft/publish", stylometry_stylometryHandler.APIPutStylometrySamplePublishDraft)
-		stylometry_api.DELETE("/samples/:id", stylometry_stylometryHandler.APIDeleteStylometrySample)
-		stylometry_api.POST("/samples/:id/like", stylometry_stylometryHandler.APIPostStylometrySampleLike)
-		stylometry_api.POST("/users", stylometry_stylometryHandler.APIPostStylometryUserRegister)
-		stylometry_api.POST("/auth/login", stylometry_stylometryHandler.APIPostStylometryAuthLogin)
-		stylometry_api.POST("/auth/logout", stylometry_stylometryHandler.APIPostStylometryAuthLogout)
+		apiRoutes.GET("/samples", sampleHandler.APIGetSampleList)
+		apiRoutes.GET("/samples/feed", sampleHandler.APIGetSampleFeed)
+		apiRoutes.GET("/samples/draft", sampleHandler.APIGetSampleDraft)
+		apiRoutes.POST("/samples", sampleHandler.APIPostSampleDraft)
+		apiRoutes.PUT("/samples/draft/publish", sampleHandler.APIPutSamplePublishDraft)
+		apiRoutes.DELETE("/samples/:id", sampleHandler.APIDeleteSample)
+		apiRoutes.POST("/samples/:id/like", sampleHandler.APIPostSampleLike)
+		apiRoutes.POST("/users", sampleHandler.APIPostUserRegister)
+		apiRoutes.POST("/auth/login", sampleHandler.APIPostAuthLogin)
+		apiRoutes.POST("/auth/logout", sampleHandler.APIPostAuthLogout)
 	}
-	log.Println("Server start up: http://127.0.0.1:8080/samples/feed")
-	if stylometry_err := stylometry_r.Run(":8080"); stylometry_err != nil {
-		logrus.Fatal(stylometry_err)
+	log.Println("Server start up: http://127.0.0.1:8080/api/samples")
+	if err := router.Run(":8080"); err != nil {
+		logrus.Fatal(err)
 	}
 	log.Println("Server down")
+}
+
+func stylometryFrontendEnabled() bool {
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("ENABLE_FRONTEND")), "true")
 }

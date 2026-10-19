@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#F7F7F7">
     <title>Корпус текстовых образцов — Стилометрия</title>
-    <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css?v=gray-blocks-7">
+    <link rel="stylesheet" href="/stylometry_static/stylometry_styles.css?v=readability-9">
 </head>
 <body>
     <main
@@ -64,27 +64,24 @@
                         <article class="star-card">
                             <a
                                 class="star-card__link"
-                                href="/samples/feed?stylometry_id={{ .StylometrySampleID }}"
-                                data-video-url="{{ .StylometrySampleVideoURL }}"
+                                href="/samples/feed?stylometry_id={{ .ID }}"
+                                data-video-url="{{ .VideoURL }}"
                             >
                                 <img
-                                    src="{{ .StylometrySampleImageURL }}"
-                                    alt="{{ .StylometrySampleTextCreator }}"
+                                    src="{{ .ImageURL }}"
+                                    alt="{{ .TextCreator }}"
                                 >
                                 <span class="star-card__shade" aria-hidden="true"></span>
 
                                 <div class="star-card__body">
-                                    <p class="star-card__distance">Длина = {{ .StylometrySampleAverageSentenceLength }} слов</p>
-                                    <h2>{{ .StylometrySampleTextCreator }}</h2>
-                                    <span class="star-card__likes">
-                                        {{ len .StylometrySampleLikes }} <span aria-hidden="true">♥</span>
-                                    </span>
+                                    <p class="star-card__distance">Длина = {{ .AverageSentenceLength }} слов</p>
+                                    <h2>{{ .TextCreator }}</h2>
                                 </div>
                             </a>
 
                             <form class="star-card__delete" action="/samples/delete" method="post">
-                                <input type="hidden" name="stylometry_id" value="{{ .StylometrySampleID }}">
-                                <button class="round-action round-action--small" type="submit" aria-label="Исключить из корпуса: {{ .StylometrySampleTextCreator }}" title="Логически удалить образец">
+                                <input type="hidden" name="stylometry_id" value="{{ .ID }}">
+                                <button class="round-action round-action--small" type="submit" aria-label="Исключить из корпуса: {{ .TextCreator }}" title="Логически удалить образец">
                                     <svg viewBox="0 0 24 24" aria-hidden="true">
                                         <path d="M4 7h16" />
                                         <path d="M10 11v6" />

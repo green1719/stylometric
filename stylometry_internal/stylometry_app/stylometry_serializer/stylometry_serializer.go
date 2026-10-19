@@ -6,43 +6,52 @@ import (
 	"stylometry/stylometry_internal/stylometry_app/stylometry_model"
 )
 
-type StylometrySampleResponse struct {
-	StylometrySampleID                    uint       `json:"stylometry_sample_id"`
-	StylometrySampleTextCreator           string     `json:"stylometry_sample_text_creator"`
-	StylometrySampleDescr                 string     `json:"stylometry_sample_descr"`
-	StylometrySampleImageURL              string     `json:"stylometry_sample_image_url"`
-	StylometrySampleVideoURL              string     `json:"stylometry_sample_video_url"`
-	StylometrySampleAverageSentenceLength float64    `json:"stylometry_sample_average_sentence_length"`
-	StylometrySampleConjunctionFrequency  float64    `json:"stylometry_sample_conjunction_frequency"`
-	StylometrySampleLikesCount            int        `json:"stylometry_sample_likes_count"`
-	StylometrySampleIsCurrentUserCreator  int        `json:"stylometry_sample_is_current_user_creator"`
-	StylometrySampleCreatedAt             *time.Time `json:"stylometry_sample_created_at,omitempty"`
-	StylometrySampleUpdatedAt             *time.Time `json:"stylometry_sample_updated_at,omitempty"`
+type SampleResponseDTO struct {
+	ID                    uint       `json:"stylometry_sample_id"`
+	TextCreator           string     `json:"stylometry_sample_text_creator"`
+	ShortDescription      string     `json:"stylometry_sample_descr"`
+	ImageURL              string     `json:"stylometry_sample_image_url"`
+	VideoURL              string     `json:"stylometry_sample_video_url"`
+	AverageSentenceLength float64    `json:"stylometry_sample_average_sentence_length"`
+	ConjunctionFrequency  float64    `json:"stylometry_sample_conjunction_frequency"`
+	LikesCount            int        `json:"stylometry_sample_likes_count"`
+	IsCurrentUserCreator  int        `json:"stylometry_sample_is_current_user_creator"`
+	IsLiked               int        `json:"is_liked"`
+	CreatedAt             *time.Time `json:"stylometry_sample_created_at,omitempty"`
+	UpdatedAt             *time.Time `json:"stylometry_sample_updated_at,omitempty"`
 }
 
-func SampleResponse(stylometry_sample model.StylometrySampleTextSample, stylometry_current_user_id uint) StylometrySampleResponse {
+func SampleResponse(stylometry_sample model.Sample, stylometry_current_user_id uint) SampleResponseDTO {
 	stylometry_is_creator := 0
-	if stylometry_sample.StylometrySampleCreatorID == stylometry_current_user_id {
+	if stylometry_sample.CreatorID == stylometry_current_user_id {
 		stylometry_is_creator = 1
 	}
+	stylometry_is_liked := 0
+	for _, stylometry_like := range stylometry_sample.Likes {
+		if stylometry_like.UserID == stylometry_current_user_id {
+			stylometry_is_liked = 1
+			break
+		}
+	}
 
-	return StylometrySampleResponse{
-		StylometrySampleID:                    stylometry_sample.StylometrySampleID,
-		StylometrySampleTextCreator:           stylometry_sample.StylometrySampleTextCreator,
-		StylometrySampleDescr:                 stylometry_sample.StylometrySampleDescr,
-		StylometrySampleImageURL:              stylometry_sample.StylometrySampleImageURL,
-		StylometrySampleVideoURL:              stylometry_sample.StylometrySampleVideoURL,
-		StylometrySampleAverageSentenceLength: stylometry_sample.StylometrySampleAverageSentenceLength,
-		StylometrySampleConjunctionFrequency:  stylometry_sample.StylometrySampleConjunctionFrequency,
-		StylometrySampleLikesCount:            len(stylometry_sample.StylometrySampleLikes),
-		StylometrySampleIsCurrentUserCreator:  stylometry_is_creator,
-		StylometrySampleCreatedAt:             stylometry_sample.StylometrySampleCreatedAt,
-		StylometrySampleUpdatedAt:             stylometry_sample.StylometrySampleUpdatedAt,
+	return SampleResponseDTO{
+		ID:                    stylometry_sample.ID,
+		TextCreator:           stylometry_sample.TextCreator,
+		ShortDescription:      stylometry_sample.ShortDescription,
+		ImageURL:              stylometry_sample.ImageURL,
+		VideoURL:              stylometry_sample.VideoURL,
+		AverageSentenceLength: stylometry_sample.AverageSentenceLength,
+		ConjunctionFrequency:  stylometry_sample.ConjunctionFrequency,
+		LikesCount:            len(stylometry_sample.Likes),
+		IsCurrentUserCreator:  stylometry_is_creator,
+		IsLiked:               stylometry_is_liked,
+		CreatedAt:             stylometry_sample.CreatedAt,
+		UpdatedAt:             stylometry_sample.UpdatedAt,
 	}
 }
 
-func SampleListResponse(stylometry_samples []model.StylometrySampleTextSample, stylometry_current_user_id uint) []StylometrySampleResponse {
-	stylometry_response := make([]StylometrySampleResponse, 0, len(stylometry_samples))
+func SampleListResponse(stylometry_samples []model.Sample, stylometry_current_user_id uint) []SampleResponseDTO {
+	stylometry_response := make([]SampleResponseDTO, 0, len(stylometry_samples))
 
 	for _, stylometry_sample := range stylometry_samples {
 		stylometry_response = append(stylometry_response, SampleResponse(stylometry_sample, stylometry_current_user_id))
@@ -51,14 +60,14 @@ func SampleListResponse(stylometry_samples []model.StylometrySampleTextSample, s
 	return stylometry_response
 }
 
-type StylometrySampleUserResponse struct {
-	StylometrySampleID   uint   `json:"stylometry_sample_id"`
-	StylometrySampleName string `json:"stylometry_sample_name"`
+type UserResponseDTO struct {
+	ID   uint   `json:"stylometry_sample_id"`
+	Name string `json:"stylometry_sample_name"`
 }
 
-func UserResponse(stylometry_user model.StylometrySampleUser) StylometrySampleUserResponse {
-	return StylometrySampleUserResponse{
-		StylometrySampleID:   stylometry_user.StylometrySampleID,
-		StylometrySampleName: stylometry_user.StylometrySampleName,
+func UserResponse(stylometry_user model.User) UserResponseDTO {
+	return UserResponseDTO{
+		ID:   stylometry_user.ID,
+		Name: stylometry_user.Name,
 	}
 }

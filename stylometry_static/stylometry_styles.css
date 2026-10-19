@@ -144,23 +144,26 @@ a {
 }
 
 /* Правая колонка: параметры и обе иконки. */
-.feed-side {
+.feed-page .feed-side {
+    position: absolute;
+    right: 0;
+    bottom: 0;
     display: flex;
-    width: 190px;
+    width: 186px;
     flex: 0 0 auto;
     align-items: flex-end;
     flex-direction: column;
-    gap: 10px;
+    gap: 34px;
 }
 
-.feed-actions {
+.feed-page .feed-actions {
     display: flex;
     align-items: flex-end;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
 }
 
-.feed-action {
+.feed-page .feed-action {
     display: flex;
     align-items: center;
     flex-direction: column;
@@ -169,7 +172,7 @@ a {
     text-align: center;
 }
 
-.feed-action small {
+.feed-page .feed-action small {
     font-size: 0.76rem;
     font-weight: 700;
     text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
@@ -257,8 +260,8 @@ a {
     font-size: 0.72rem;
 }
 
-.feed-content h2 {
-    max-width: 100%;
+.feed-page .feed-content h2 {
+    max-width: calc(100% - 98px);
     margin: 0 0 10px;
     color: rgba(255, 255, 255, 0.92);
     font-family: Georgia, "Times New Roman", serif;
@@ -266,8 +269,8 @@ a {
     line-height: 1;
 }
 
-.description {
-    max-width: 100%;
+.feed-page .description {
+    max-width: calc(100% - 98px);
     margin: 0;
     color: rgba(255, 255, 255, 0.92);
     font-size: 1rem;
@@ -314,37 +317,78 @@ a {
     content: "Свернуть";
 }
 
-.metrics {
+.feed-page .metrics {
     display: grid;
     width: 100%;
     gap: 8px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
 }
 
-.metric {
+.feed-page .metric {
     display: flex;
-    min-height: 36px;
+    min-height: 80px;
     align-items: center;
-    justify-content: center;
-    gap: 3px;
-    padding: 6px 8px;
-    border: 1px solid var(--stylometry-color-border);
-    border-radius: 7px;
-    text-align: center;
-    background: var(--stylometry-color-surface);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    gap: 12px;
+    padding: 12px 13px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.96);
+    text-align: left;
+    background: rgba(25, 25, 28, 0.85);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(12px);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.74rem;
 }
 
-.metric span {
-    color: var(--stylometry-color-muted);
+.feed-page .metric__icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.82);
 }
 
-.metric strong {
-    font-weight: 700;
+.feed-page .metric__icon svg {
+    width: 34px;
+    height: 34px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.feed-page .metric__content {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.feed-page .metric__label {
+    color: rgba(255, 255, 255, 0.78);
     font-size: 0.84rem;
+    line-height: 1.12;
+}
+
+.feed-page .metric strong {
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 1.34rem;
+    line-height: 1;
+}
+
+.feed-page .round-action {
+    width: 74px;
+    height: 74px;
+    min-width: 74px;
+    min-height: 74px;
+    flex-basis: 74px;
+}
+
+.feed-page .round-action svg {
+    width: 55%;
+    height: 55%;
 }
 
 .bottom-nav {
@@ -1034,4 +1078,149 @@ a {
 
 .star-card h2 {
     color: #FFFFFF;
+}
+
+/* Улучшенная читаемость: изменения ограничены тремя пользовательскими экранами. */
+.feed-page .feed-header .eyebrow,
+.feed-page .feed-header h1 {
+    font-size: clamp(2.2rem, 7.8vw, 3.3rem);
+}
+
+.feed-page .feed-content h2 {
+    max-width: calc(100% - 116px);
+    font-size: clamp(2.35rem, 7.7vw, 3.15rem);
+}
+
+.feed-page .description {
+    max-width: calc(100% - 116px);
+    font-size: clamp(1.375rem, 5.8vw, 1.5rem);
+    line-height: 1.32;
+}
+
+.feed-page .description__more {
+    font-size: clamp(1.25rem, 5.3vw, 1.375rem);
+    line-height: 1.1;
+}
+
+.feed-page .feed-action {
+    width: 74px;
+}
+
+.feed-page .feed-action small {
+    width: 100%;
+    font-size: clamp(1.25rem, 5.3vw, 1.375rem);
+    line-height: 1.1;
+    text-align: center;
+}
+
+.form-page .status-label {
+    font-size: 1.1rem;
+}
+
+.form-page .page-content h1 {
+    font-size: clamp(2.6rem, 8.35vw, 3.3rem);
+}
+
+.form-page .media-field > span:last-of-type {
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 1.2rem;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+
+.form-page .field {
+    gap: 8px;
+    padding: 14px;
+    font-size: 1.25rem;
+}
+
+.form-page .field input,
+.form-page .field textarea {
+    font-size: 1.35rem;
+}
+
+.form-page .field input {
+    padding-right: 18px;
+    padding-left: 18px;
+}
+
+.form-page .field textarea {
+    padding: 17px 18px;
+}
+
+.form-page .primary-action {
+    font-size: 1.5rem;
+}
+
+.grid-page .page-content h1 {
+    font-size: clamp(2.2rem, 9.9vw, 3.05rem);
+}
+
+.grid-page .filter-form__head {
+    align-items: flex-start;
+    font-size: 1.25rem;
+    line-height: 1.16;
+}
+
+.grid-page .filter-form__head output {
+    font-size: clamp(1.375rem, 6vw, 1.5rem);
+    line-height: 1.1;
+}
+
+.grid-page .filter-form__scale {
+    font-size: 1.1rem;
+}
+
+.grid-page .star-card__shade {
+    background: linear-gradient(180deg, transparent 27%, rgba(30, 30, 30, 0.9) 100%);
+}
+
+.grid-page .star-card__body {
+    right: 3px;
+    bottom: 9px;
+    left: 3px;
+    display: grid;
+    align-items: end;
+    row-gap: 3px;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.grid-page .star-card__distance {
+    margin-bottom: 6px;
+    grid-column: 1 / -1;
+    color: rgba(255, 255, 255, 0.82);
+    font-family: inherit;
+    font-size: clamp(1rem, 4.7vw, 1.125rem);
+    font-weight: 650;
+    line-height: 1.08;
+    white-space: nowrap;
+}
+
+.grid-page .star-card h2 {
+    display: -webkit-box;
+    max-width: none;
+    overflow: hidden;
+    padding: 0;
+    font-size: clamp(1.5rem, 6.3vw, 1.625rem);
+    font-weight: 700;
+    line-height: 0.98;
+    text-overflow: clip;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.grid-page .star-card__likes {
+    position: static;
+    display: inline-flex;
+    justify-self: end;
+    margin-top: 1px;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: clamp(1.125rem, 5vw, 1.25rem);
+    font-weight: 700;
+    line-height: 1;
+}
+
+.grid-page .star-card__likes span {
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 1em;
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"os"
@@ -28,24 +29,24 @@ const stylometryDraftBrokenVideoURL = "http://localhost:9000/stylometry/stylomet
 
 var stylometryMediaClient = http.Client{Timeout: 500 * time.Millisecond}
 
-// StylometrySampleRepository хранит подключение к БД.
-type StylometrySampleRepository struct {
+// Repository хранит подключение к БД.
+type Repository struct {
 	DB *gorm.DB
 }
 
-// NewStylometrySampleRepository создаёт репозиторий.
-func NewStylometrySampleRepository(stylometry_db *gorm.DB) *StylometrySampleRepository {
-	return &StylometrySampleRepository{DB: stylometry_db}
+// NewRepository создаёт репозиторий.
+func NewRepository(stylometry_db *gorm.DB) *Repository {
+	return &Repository{DB: stylometry_db}
 }
 
 func stylometryCurrentUserID() uint {
-	return stylometry_session.CurrentUser().StylometrySampleID
+	return stylometry_session.CurrentUser().ID
 }
 
 // PublishedSamples возвращает только опубликованные карточки.
-func (stylometry_repository *StylometrySampleRepository) PublishedSamples() ([]model.StylometrySampleTextSample, error) {
-	var stylometry_samples []model.StylometrySampleTextSample
-	stylometry_err := stylometry_repository.DB.Preload("StylometrySampleLikes").Where("\"StylometrySampleStatus\" = ?", model.StatusPublished).Order("\"StylometrySampleID\" ASC").Find(&stylometry_samples).Error
+func (stylometry_repository *Repository) PublishedSamples() ([]model.Sample, error) {
+	var stylometry_samples []model.Sample
+	stylometry_err := stylometry_repository.DB.Preload("Likes").Where("\"Status\" = ?", model.StatusPublished).Order("\"ID\" ASC").Find(&stylometry_samples).Error
 	if stylometry_err != nil {
 		return nil, stylometry_err
 	}
@@ -56,38 +57,38 @@ func (stylometry_repository *StylometrySampleRepository) PublishedSamples() ([]m
 // FeedSample возвращает одну опубликованную карточку для ленты.
 // Без id берёт первую опубликованную запись.
 // С id и next=true берёт следующую опубликованную запись после этого id.
-func (stylometry_repository *StylometrySampleRepository) FeedSample(stylometry_id *uint, stylometry_next bool) (model.StylometrySampleTextSample, bool, error) {
-	var stylometry_sample model.StylometrySampleTextSample
+func (stylometry_repository *Repository) FeedSample(stylometry_id *uint, stylometry_next bool) (model.Sample, bool, error) {
+	var stylometry_sample model.Sample
 
 	stylometry_query := stylometry_repository.DB.
-		Preload("StylometrySampleLikes").
-		Where("\"StylometrySampleStatus\" = ?", model.StatusPublished)
+		Preload("Likes").
+		Where("\"Status\" = ?", model.StatusPublished)
 
 	if stylometry_id != nil && stylometry_next {
-		stylometry_query = stylometry_query.Where("\"StylometrySampleID\" > ?", *stylometry_id)
+		stylometry_query = stylometry_query.Where("\"ID\" > ?", *stylometry_id)
 	}
 
 	if stylometry_id != nil && !stylometry_next {
-		stylometry_query = stylometry_query.Where("\"StylometrySampleID\" = ?", *stylometry_id)
+		stylometry_query = stylometry_query.Where("\"ID\" = ?", *stylometry_id)
 	}
 
 	stylometry_err := stylometry_query.
-		Order("\"StylometrySampleID\" ASC").
+		Order("\"ID\" ASC").
 		First(&stylometry_sample).Error
 
 	if errors.Is(stylometry_err, gorm.ErrRecordNotFound) && stylometry_id != nil && stylometry_next {
 		stylometry_err = stylometry_repository.DB.
-			Preload("StylometrySampleLikes").
-			Where("\"StylometrySampleStatus\" = ?", model.StatusPublished).
-			Order("\"StylometrySampleID\" ASC").
+			Preload("Likes").
+			Where("\"Status\" = ?", model.StatusPublished).
+			Order("\"ID\" ASC").
 			First(&stylometry_sample).Error
 	}
 
 	if errors.Is(stylometry_err, gorm.ErrRecordNotFound) {
-		return model.StylometrySampleTextSample{}, false, nil
+		return model.Sample{}, false, nil
 	}
 	if stylometry_err != nil {
-		return model.StylometrySampleTextSample{}, false, stylometry_err
+		return model.Sample{}, false, stylometry_err
 	}
 
 	stylometry_repository.fillDefaultMediaForSample(&stylometry_sample)
@@ -95,43 +96,46 @@ func (stylometry_repository *StylometrySampleRepository) FeedSample(stylometry_i
 }
 
 // SampleByID возвращает опубликованную карточку по ID.
-func (stylometry_repository *StylometrySampleRepository) SampleByID(stylometry_id uint) (model.StylometrySampleTextSample, bool, error) {
-	var stylometry_sample model.StylometrySampleTextSample
-	stylometry_err := stylometry_repository.DB.Preload("StylometrySampleLikes").Where("\"StylometrySampleID\" = ? AND \"StylometrySampleStatus\" = ?", stylometry_id, model.StatusPublished).First(&stylometry_sample).Error
+func (stylometry_repository *Repository) SampleByID(stylometry_id uint) (model.Sample, bool, error) {
+	var stylometry_sample model.Sample
+	stylometry_err := stylometry_repository.DB.Preload("Likes").Where("\"ID\" = ? AND \"Status\" = ?", stylometry_id, model.StatusPublished).First(&stylometry_sample).Error
 	if errors.Is(stylometry_err, gorm.ErrRecordNotFound) {
-		return model.StylometrySampleTextSample{}, false, nil
+		return model.Sample{}, false, nil
 	}
 	if stylometry_err != nil {
-		return model.StylometrySampleTextSample{}, false, stylometry_err
+		return model.Sample{}, false, stylometry_err
 	}
 	stylometry_repository.fillDefaultMediaForSample(&stylometry_sample)
 	return stylometry_sample, true, nil
 }
 
 // DraftSample возвращает черновик текущего пользователя.
-func (stylometry_repository *StylometrySampleRepository) DraftSample() (model.StylometrySampleTextSample, bool, error) {
-	var stylometry_sample model.StylometrySampleTextSample
-	stylometry_err := stylometry_repository.DB.Preload("StylometrySampleLikes").Where("\"StylometrySampleCreatorID\" = ? AND \"StylometrySampleStatus\" = ?", stylometryCurrentUserID(), model.StatusDraft).First(&stylometry_sample).Error
+func (stylometry_repository *Repository) DraftSample() (model.Sample, bool, error) {
+	var stylometry_sample model.Sample
+	stylometry_err := stylometry_repository.DB.Preload("Likes").Where("\"CreatorID\" = ? AND \"Status\" = ?", stylometryCurrentUserID(), model.StatusDraft).First(&stylometry_sample).Error
 	if errors.Is(stylometry_err, gorm.ErrRecordNotFound) {
-		return model.StylometrySampleTextSample{}, false, nil
+		return model.Sample{}, false, nil
 	}
 	if stylometry_err != nil {
-		return model.StylometrySampleTextSample{}, false, stylometry_err
+		return model.Sample{}, false, stylometry_err
 	}
 	stylometry_repository.fillDefaultMediaForSample(&stylometry_sample)
 	return stylometry_sample, true, nil
 }
 
 // CreateDraft создаёт или обновляет черновик при нажатии кнопки "Далее".
-func (stylometry_repository *StylometrySampleRepository) CreateDraft(stylometry_text_creator string, stylometry_text string, stylometry_image_url string, stylometry_video_url string) (model.StylometrySampleTextSample, error) {
+func (stylometry_repository *Repository) CreateDraft(stylometry_text_creator string, stylometry_text string, stylometry_image_url string, stylometry_video_url string) (model.Sample, error) {
 	stylometry_existing, stylometry_found, stylometry_err := stylometry_repository.DraftSample()
 	if stylometry_err != nil {
-		return model.StylometrySampleTextSample{}, stylometry_err
+		return model.Sample{}, stylometry_err
 	}
 
-	stylometry_text = strings.TrimSpace(stylometry_text)
-	if stylometry_text == "" {
-		return model.StylometrySampleTextSample{}, errors.New("текстовый отрывок не заполнен")
+	stylometry_text_creator = strings.TrimSpace(stylometry_text_creator)
+	if stylometry_text_creator == "" {
+		return model.Sample{}, errors.New("автор текстового образца не заполнен")
+	}
+	if strings.TrimSpace(stylometry_text) == "" {
+		return model.Sample{}, errors.New("текстовый отрывок не заполнен")
 	}
 
 	stylometry_metrics := analysis.AnalyzeText(stylometry_text)
@@ -140,51 +144,51 @@ func (stylometry_repository *StylometrySampleRepository) CreateDraft(stylometry_
 
 	if stylometry_found {
 		stylometry_updates := map[string]interface{}{
-			"StylometrySampleTextCreator":           stylometry_text_creator,
-			"StylometrySampleShortDescription":      stylometry_text,
-			"StylometrySampleImageURL":              stylometry_image_url,
-			"StylometrySampleVideoURL":              stylometry_video_url,
-			"StylometrySampleAverageSentenceLength": stylometry_metrics.StylometrySampleAverageSentenceLength,
-			"StylometrySampleConjunctionFrequency":  stylometry_metrics.StylometrySampleConjunctionFrequency,
+			"TextCreator":           stylometry_text_creator,
+			"ShortDescription":      stylometry_text,
+			"ImageURL":              stylometry_image_url,
+			"VideoURL":              stylometry_video_url,
+			"AverageSentenceLength": stylometry_metrics.AverageSentenceLength,
+			"ConjunctionFrequency":  stylometry_metrics.ConjunctionFrequency,
 		}
-		stylometry_err = stylometry_repository.DB.Model(&model.StylometrySampleTextSample{}).
-			Where("\"StylometrySampleID\" = ?", stylometry_existing.StylometrySampleID).
+		stylometry_err = stylometry_repository.DB.Model(&model.Sample{}).
+			Where("\"ID\" = ?", stylometry_existing.ID).
 			Updates(stylometry_updates).Error
 		if stylometry_err != nil {
-			return model.StylometrySampleTextSample{}, stylometry_err
+			return model.Sample{}, stylometry_err
 		}
-		stylometry_existing.StylometrySampleTextCreator = stylometry_text_creator
-		stylometry_existing.StylometrySampleDescr = stylometry_text
-		stylometry_existing.StylometrySampleImageURL = stylometry_image_url
-		stylometry_existing.StylometrySampleVideoURL = stylometry_video_url
-		stylometry_existing.StylometrySampleAverageSentenceLength = stylometry_metrics.StylometrySampleAverageSentenceLength
-		stylometry_existing.StylometrySampleConjunctionFrequency = stylometry_metrics.StylometrySampleConjunctionFrequency
+		stylometry_existing.TextCreator = stylometry_text_creator
+		stylometry_existing.ShortDescription = stylometry_text
+		stylometry_existing.ImageURL = stylometry_image_url
+		stylometry_existing.VideoURL = stylometry_video_url
+		stylometry_existing.AverageSentenceLength = stylometry_metrics.AverageSentenceLength
+		stylometry_existing.ConjunctionFrequency = stylometry_metrics.ConjunctionFrequency
 		stylometry_repository.fillDefaultMediaForSample(&stylometry_existing)
 		return stylometry_existing, nil
 	}
 
-	stylometry_sample := model.StylometrySampleTextSample{
-		StylometrySampleTextCreator:           stylometry_text_creator,
-		StylometrySampleDescr:                 stylometry_text,
-		StylometrySampleStatus:                model.StatusDraft,
-		StylometrySampleImageURL:              stylometry_image_url,
-		StylometrySampleVideoURL:              stylometry_video_url,
-		StylometrySampleAverageSentenceLength: stylometry_metrics.StylometrySampleAverageSentenceLength,
-		StylometrySampleConjunctionFrequency:  stylometry_metrics.StylometrySampleConjunctionFrequency,
-		StylometrySampleCreatorID:             stylometryCurrentUserID(),
+	stylometry_sample := model.Sample{
+		TextCreator:           stylometry_text_creator,
+		ShortDescription:      stylometry_text,
+		Status:                model.StatusDraft,
+		ImageURL:              stylometry_image_url,
+		VideoURL:              stylometry_video_url,
+		AverageSentenceLength: stylometry_metrics.AverageSentenceLength,
+		ConjunctionFrequency:  stylometry_metrics.ConjunctionFrequency,
+		CreatorID:             stylometryCurrentUserID(),
 	}
 	stylometry_err = stylometry_repository.DB.Create(&stylometry_sample).Error
 	if stylometry_err != nil {
-		return model.StylometrySampleTextSample{}, stylometry_err
+		return model.Sample{}, stylometry_err
 	}
 	stylometry_repository.fillDefaultMediaForSample(&stylometry_sample)
 	return stylometry_sample, nil
 }
 
 // PublishDraft публикует черновик текущего пользователя.
-func (stylometry_repository *StylometrySampleRepository) PublishDraft(stylometry_description string, stylometry_avg_len float64, stylometry_conj_freq float64) error {
+func (stylometry_repository *Repository) PublishDraft(stylometry_description string, stylometry_avg_len float64, stylometry_conj_freq float64) error {
 	stylometry_updated_at := time.Now()
-	stylometry_result := stylometry_repository.DB.Model(&model.StylometrySampleTextSample{}).Where("\"StylometrySampleCreatorID\" = ? AND \"StylometrySampleStatus\" = ?", stylometryCurrentUserID(), model.StatusDraft).Updates(map[string]interface{}{"StylometrySampleShortDescription": stylometry_description, "StylometrySampleAverageSentenceLength": stylometry_avg_len, "StylometrySampleConjunctionFrequency": stylometry_conj_freq, "StylometrySampleStatus": model.StatusPublished, "StylometrySampleUpdatedAt": &stylometry_updated_at})
+	stylometry_result := stylometry_repository.DB.Model(&model.Sample{}).Where("\"CreatorID\" = ? AND \"Status\" = ?", stylometryCurrentUserID(), model.StatusDraft).Updates(map[string]interface{}{"ShortDescription": stylometry_description, "AverageSentenceLength": stylometry_avg_len, "ConjunctionFrequency": stylometry_conj_freq, "Status": model.StatusPublished, "UpdatedAt": &stylometry_updated_at})
 	if stylometry_result.Error != nil {
 		return stylometry_result.Error
 	}
@@ -195,10 +199,10 @@ func (stylometry_repository *StylometrySampleRepository) PublishDraft(stylometry
 }
 
 // SetLike ставит или снимает лайк текущего пользователя у опубликованной карточки.
-func (stylometry_repository *StylometrySampleRepository) SetLike(stylometry_id uint, stylometry_like_value int) (bool, error) {
+func (stylometry_repository *Repository) SetLike(stylometry_id uint, stylometry_like_value int) (bool, error) {
 	var stylometry_count int64
-	stylometry_err := stylometry_repository.DB.Model(&model.StylometrySampleTextSample{}).
-		Where("\"StylometrySampleID\" = ? AND \"StylometrySampleStatus\" = ?", stylometry_id, model.StatusPublished).
+	stylometry_err := stylometry_repository.DB.Model(&model.Sample{}).
+		Where("\"ID\" = ? AND \"Status\" = ?", stylometry_id, model.StatusPublished).
 		Count(&stylometry_count).Error
 	if stylometry_err != nil {
 		return false, stylometry_err
@@ -207,9 +211,9 @@ func (stylometry_repository *StylometrySampleRepository) SetLike(stylometry_id u
 		return false, nil
 	}
 
-	stylometry_like := model.StylometrySampleLike{
-		StylometrySampleUserID:       stylometryCurrentUserID(),
-		StylometrySampleTextSampleID: stylometry_id,
+	stylometry_like := model.Like{
+		UserID:   stylometryCurrentUserID(),
+		SampleID: stylometry_id,
 	}
 
 	if stylometry_like_value == 1 {
@@ -218,60 +222,101 @@ func (stylometry_repository *StylometrySampleRepository) SetLike(stylometry_id u
 	}
 
 	stylometry_err = stylometry_repository.DB.
-		Where("\"StylometrySampleUserID\" = ? AND \"StylometrySampleTextSampleID\" = ?", stylometryCurrentUserID(), stylometry_id).
-		Delete(&model.StylometrySampleLike{}).Error
+		Where("\"UserID\" = ? AND \"SampleID\" = ?", stylometryCurrentUserID(), stylometry_id).
+		Delete(&model.Like{}).Error
 	return true, stylometry_err
 }
 
 // RegisterUser создаёт нового пользователя для показа пользовательского домена API.
-func (stylometry_repository *StylometrySampleRepository) RegisterUser(stylometry_name string, stylometry_password string) (model.StylometrySampleUser, error) {
-	stylometry_user := model.StylometrySampleUser{
-		StylometrySampleName:     stylometry_name,
-		StylometrySamplePassword: stylometry_password,
+func (stylometry_repository *Repository) RegisterUser(stylometry_name string, stylometry_password string) (model.User, error) {
+	stylometry_user := model.User{
+		Name:     stylometry_name,
+		Password: stylometry_password,
 	}
 	stylometry_err := stylometry_repository.DB.Create(&stylometry_user).Error
 	if stylometry_err != nil {
-		return model.StylometrySampleUser{}, stylometry_err
+		return model.User{}, stylometry_err
 	}
 	return stylometry_user, nil
 }
 
-// DeleteSampleSQL логически удаляет карточку через SQL UPDATE без ORM-модели.
-func (stylometry_repository *StylometrySampleRepository) DeleteSampleSQL(stylometry_id uint) error {
+// DeleteSampleSQL логически удаляет карточку через явный курсор PostgreSQL.
+func (stylometry_repository *Repository) DeleteSampleSQL(stylometry_id uint) (stylometry_err error) {
 	stylometry_sql_db, stylometry_err := stylometry_repository.DB.DB()
 	if stylometry_err != nil {
 		return stylometry_err
 	}
 
-	stylometry_rows, stylometry_err := stylometry_sql_db.QueryContext(context.Background(),
-		"UPDATE \"StylometrySampleTextSamples\" SET \"StylometrySampleStatus\" = $1 WHERE \"StylometrySampleID\" = $2 AND \"StylometrySampleStatus\" <> $3 AND \"StylometrySampleCreatorID\" = $4 RETURNING \"StylometrySampleID\"",
-		string(model.StatusDeleted), stylometry_id, string(model.StatusDeleted), stylometryCurrentUserID())
+	stylometry_context := context.Background()
+	stylometry_tx, stylometry_err := stylometry_sql_db.BeginTx(stylometry_context, nil)
 	if stylometry_err != nil {
 		return stylometry_err
 	}
-	defer stylometry_rows.Close()
 
-	if stylometry_rows.Next() {
-		var stylometry_deleted_id uint
-		if stylometry_err := stylometry_rows.Scan(&stylometry_deleted_id); stylometry_err != nil {
-			return stylometry_err
+	stylometry_committed := false
+	stylometry_cursor_open := false
+	defer func() {
+		if stylometry_cursor_open {
+			if _, stylometry_close_err := stylometry_tx.ExecContext(stylometry_context, "CLOSE stylometry_sample_delete_cursor"); stylometry_err == nil && stylometry_close_err != nil {
+				stylometry_err = stylometry_close_err
+			}
 		}
-		return stylometry_rows.Err()
-	}
-	if stylometry_err := stylometry_rows.Err(); stylometry_err != nil {
+		if !stylometry_committed {
+			_ = stylometry_tx.Rollback()
+		}
+	}()
+
+	// Курсор выбирает и блокирует именно доступную текущему пользователю карточку.
+	_, stylometry_err = stylometry_tx.ExecContext(stylometry_context,
+		"DECLARE stylometry_sample_delete_cursor NO SCROLL CURSOR FOR SELECT \"ID\" FROM \"StylometrySamples\" WHERE \"ID\" = $1 AND \"Status\" <> $2 AND \"CreatorID\" = $3 FOR UPDATE",
+		stylometry_id, string(model.StatusDeleted), stylometryCurrentUserID())
+	if stylometry_err != nil {
 		return stylometry_err
 	}
-	return errors.New("карточка для удаления не найдена")
+	stylometry_cursor_open = true
+
+	var stylometry_deleted_id uint
+	stylometry_err = stylometry_tx.QueryRowContext(stylometry_context, "FETCH NEXT FROM stylometry_sample_delete_cursor").Scan(&stylometry_deleted_id)
+	if errors.Is(stylometry_err, sql.ErrNoRows) {
+		return errors.New("карточка для удаления не найдена")
+	}
+	if stylometry_err != nil {
+		return stylometry_err
+	}
+
+	stylometry_result, stylometry_err := stylometry_tx.ExecContext(stylometry_context,
+		"UPDATE \"StylometrySamples\" SET \"Status\" = $1 WHERE \"ID\" = $2 AND \"Status\" <> $3 AND \"CreatorID\" = $4",
+		string(model.StatusDeleted), stylometry_deleted_id, string(model.StatusDeleted), stylometryCurrentUserID())
+	if stylometry_err != nil {
+		return stylometry_err
+	}
+	stylometry_rows_affected, stylometry_err := stylometry_result.RowsAffected()
+	if stylometry_err != nil {
+		return stylometry_err
+	}
+	if stylometry_rows_affected != 1 {
+		return errors.New("карточка для удаления не найдена")
+	}
+
+	if _, stylometry_err = stylometry_tx.ExecContext(stylometry_context, "CLOSE stylometry_sample_delete_cursor"); stylometry_err != nil {
+		return stylometry_err
+	}
+	stylometry_cursor_open = false
+	if stylometry_err = stylometry_tx.Commit(); stylometry_err != nil {
+		return stylometry_err
+	}
+	stylometry_committed = true
+	return nil
 }
 
 // FilteredSamples возвращает опубликованные карточки с фильтром по длине.
-func (stylometry_repository *StylometrySampleRepository) FilteredSamples(stylometry_max_avg_len *float64) ([]model.StylometrySampleTextSample, error) {
-	var stylometry_samples []model.StylometrySampleTextSample
-	stylometry_query := stylometry_repository.DB.Preload("StylometrySampleLikes").Where("\"StylometrySampleStatus\" = ?", model.StatusPublished)
+func (stylometry_repository *Repository) FilteredSamples(stylometry_max_avg_len *float64) ([]model.Sample, error) {
+	var stylometry_samples []model.Sample
+	stylometry_query := stylometry_repository.DB.Preload("Likes").Where("\"Status\" = ?", model.StatusPublished)
 	if stylometry_max_avg_len != nil {
-		stylometry_query = stylometry_query.Where("\"StylometrySampleAverageSentenceLength\" <= ?", *stylometry_max_avg_len)
+		stylometry_query = stylometry_query.Where("\"AverageSentenceLength\" <= ?", *stylometry_max_avg_len)
 	}
-	stylometry_err := stylometry_query.Order("\"StylometrySampleID\" ASC").Find(&stylometry_samples).Error
+	stylometry_err := stylometry_query.Order("\"ID\" ASC").Find(&stylometry_samples).Error
 	if stylometry_err != nil {
 		return nil, stylometry_err
 	}
@@ -280,21 +325,21 @@ func (stylometry_repository *StylometrySampleRepository) FilteredSamples(stylome
 }
 
 // fillDefaultMedia ставит дефолтные ссылки, если в БД они пустые.
-func (stylometry_repository *StylometrySampleRepository) fillDefaultMedia(stylometry_samples []model.StylometrySampleTextSample) {
+func (stylometry_repository *Repository) fillDefaultMedia(stylometry_samples []model.Sample) {
 	for stylometry_index := range stylometry_samples {
 		stylometry_repository.fillDefaultMediaForSample(&stylometry_samples[stylometry_index])
 	}
 }
 
 // fillDefaultMediaForSample ставит дефолтные ссылки в одну карточку.
-func (stylometry_repository *StylometrySampleRepository) fillDefaultMediaForSample(stylometry_sample *model.StylometrySampleTextSample) {
-	if strings.TrimSpace(stylometry_sample.StylometrySampleImageURL) == DefaultImagePath {
-		stylometry_sample.StylometrySampleImageURL = DefaultImageURL
-	} else if !stylometryMediaAvailable(stylometry_sample.StylometrySampleImageURL) {
-		stylometry_sample.StylometrySampleImageURL = DefaultImageURL
+func (stylometry_repository *Repository) fillDefaultMediaForSample(stylometry_sample *model.Sample) {
+	if strings.TrimSpace(stylometry_sample.ImageURL) == DefaultImagePath {
+		stylometry_sample.ImageURL = DefaultImageURL
+	} else if !stylometryMediaAvailable(stylometry_sample.ImageURL) {
+		stylometry_sample.ImageURL = DefaultImageURL
 	}
-	if !stylometryMediaAvailable(stylometry_sample.StylometrySampleVideoURL) {
-		stylometry_sample.StylometrySampleVideoURL = DefaultVideoURL
+	if !stylometryMediaAvailable(stylometry_sample.VideoURL) {
+		stylometry_sample.VideoURL = DefaultVideoURL
 	}
 }
 

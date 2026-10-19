@@ -20,14 +20,14 @@ const (
 	stylometryAvgLenStep = 0.5
 )
 
-// StylometrySampleHandler хранит зависимости HTTP-слоя.
-type StylometrySampleHandler struct {
-	Repository *repository.StylometrySampleRepository
+// SampleHandler хранит зависимости HTTP-слоя.
+type SampleHandler struct {
+	Repository *repository.Repository
 }
 
-// NewStylometrySampleHandler создаёт HTTP-контроллер.
-func NewStylometrySampleHandler(stylometry_r *repository.StylometrySampleRepository) *StylometrySampleHandler {
-	return &StylometrySampleHandler{Repository: stylometry_r}
+// NewSampleHandler создаёт HTTP-контроллер.
+func NewSampleHandler(stylometry_r *repository.Repository) *SampleHandler {
+	return &SampleHandler{Repository: stylometry_r}
 }
 
 // stylometryFormatLen красиво форматирует float64 для HTML.
@@ -42,7 +42,7 @@ func stylometryParseFloat(stylometry_raw string) (float64, error) {
 }
 
 // GET /samples/feed — лента; БД возвращает одну опубликованную карточку.
-func (stylometry_h *StylometrySampleHandler) GetStylometrySampleFeed(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) GetSampleFeed(stylometry_ctx *gin.Context) {
 	stylometry_raw_id := strings.TrimSpace(stylometry_ctx.Query("stylometry_id"))
 	stylometry_next := strings.EqualFold(strings.TrimSpace(stylometry_ctx.Query("next")), "true")
 	var stylometry_sample_id *uint
@@ -72,7 +72,7 @@ func (stylometry_h *StylometrySampleHandler) GetStylometrySampleFeed(stylometry_
 }
 
 // GET /samples/draft — страница добавления или публикации черновика.
-func (stylometry_h *StylometrySampleHandler) GetStylometrySampleDraft(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) GetSampleDraft(stylometry_ctx *gin.Context) {
 	stylometry_draft, stylometry_has_draft, stylometry_err := stylometry_h.Repository.DraftSample()
 	if stylometry_err != nil {
 		logrus.Error(stylometry_err)
@@ -81,12 +81,12 @@ func (stylometry_h *StylometrySampleHandler) GetStylometrySampleDraft(stylometry
 	}
 
 	if !stylometry_has_draft {
-		stylometry_draft = model.StylometrySampleTextSample{
-			StylometrySampleTextCreator: "",
-			StylometrySampleImageURL:    repository.DefaultImageURL,
-			StylometrySampleVideoURL:    repository.DefaultVideoURL,
-			StylometrySampleStatus:      model.StatusDraft,
-			StylometrySampleDescr:       "",
+		stylometry_draft = model.Sample{
+			TextCreator:      "",
+			ImageURL:         repository.DefaultImageURL,
+			VideoURL:         repository.DefaultVideoURL,
+			Status:           model.StatusDraft,
+			ShortDescription: "",
 		}
 	}
 
@@ -97,7 +97,7 @@ func (stylometry_h *StylometrySampleHandler) GetStylometrySampleDraft(stylometry
 }
 
 // POST /samples/draft — создаёт черновик через ORM.
-func (stylometry_h *StylometrySampleHandler) PostStylometrySampleCreateDraft(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) PostSampleCreateDraft(stylometry_ctx *gin.Context) {
 	stylometry_text_creator := strings.TrimSpace(stylometry_ctx.PostForm("stylometry_text_creator"))
 	if stylometry_text_creator == "" {
 		stylometry_text_creator = strings.TrimSpace(stylometry_ctx.PostForm("stylometry_title"))
@@ -128,14 +128,14 @@ func (stylometry_h *StylometrySampleHandler) PostStylometrySampleCreateDraft(sty
 }
 
 // POST /samples/draft/publish — публикует черновик через ORM.
-func (stylometry_h *StylometrySampleHandler) PostStylometrySamplePublishDraft(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) PostSamplePublishDraft(stylometry_ctx *gin.Context) {
 	stylometry_description := strings.TrimSpace(stylometry_ctx.PostForm("stylometry_descr"))
 	stylometry_metrics := analysis.AnalyzeText(stylometry_description)
 
 	stylometry_err := stylometry_h.Repository.PublishDraft(
 		stylometry_description,
-		stylometry_metrics.StylometrySampleAverageSentenceLength,
-		stylometry_metrics.StylometrySampleConjunctionFrequency,
+		stylometry_metrics.AverageSentenceLength,
+		stylometry_metrics.ConjunctionFrequency,
 	)
 	if stylometry_err != nil {
 		logrus.Error(stylometry_err)
@@ -147,7 +147,7 @@ func (stylometry_h *StylometrySampleHandler) PostStylometrySamplePublishDraft(st
 }
 
 // POST /samples/delete — логически удаляет карточку через SQL UPDATE.
-func (stylometry_h *StylometrySampleHandler) PostStylometrySampleDelete(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) PostSampleDelete(stylometry_ctx *gin.Context) {
 	stylometry_raw_id := strings.TrimSpace(stylometry_ctx.PostForm("stylometry_id"))
 	stylometry_id, stylometry_err := strconv.ParseUint(stylometry_raw_id, 10, 64)
 	if stylometry_err != nil {
@@ -166,7 +166,7 @@ func (stylometry_h *StylometrySampleHandler) PostStylometrySampleDelete(stylomet
 }
 
 // GET /samples/grid — плитка с фильтром по средней длине.
-func (stylometry_h *StylometrySampleHandler) GetStylometrySampleGrid(stylometry_ctx *gin.Context) {
+func (stylometry_h *SampleHandler) GetSampleGrid(stylometry_ctx *gin.Context) {
 	stylometry_raw_filter := strings.TrimSpace(stylometry_ctx.Query("stylometry_avg_len"))
 
 	var stylometry_max_avg_len *float64
@@ -188,7 +188,7 @@ func (stylometry_h *StylometrySampleHandler) GetStylometrySampleGrid(stylometry_
 
 	stylometry_cover_url := repository.DefaultImageURL
 	if len(stylometry_samples) > 0 {
-		stylometry_cover_url = stylometry_samples[0].StylometrySampleImageURL
+		stylometry_cover_url = stylometry_samples[0].ImageURL
 	}
 
 	stylometry_slider_value := stylometryFormatLen(stylometryAvgLenMax)
