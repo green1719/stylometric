@@ -1,0 +1,1022 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "REST API текстовых образцов: список, лента, черновики, публикация, лайки и пользователи. Вход выдаёт JWT; операции создателя требуют Bearer JWT. HTML-маршруты доступны только при ENABLE_FRONTEND=true.",
+        "title": "Stylometry API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/",
+    "paths": {
+        "/api/auth/login": {
+            "post": {
+                "description": "Проверяет пароль по bcrypt-хешу и выдаёт подписанный access token на 1 час.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API: вход"
+                ],
+                "summary": "Войти и получить JWT",
+                "parameters": [
+                    {
+                        "description": "Имя и пароль",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerLoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerJWT": []
+                    }
+                ],
+                "description": "Сохраняет jti текущего JWT в Redis blacklist до окончания его срока действия. Повторный выход с тем же токеном возвращает 401.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API: вход"
+                ],
+                "summary": "Выйти и отозвать JWT",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerLogoutResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/samples": {
+            "get": {
+                "description": "Без фильтра возвращает все опубликованные образцы. Без JWT признаки владельца и лайка равны 0; с действительным JWT вычисляются для вошедшего пользователя.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API: образцы"
+                ],
+                "summary": "Список опубликованных образцов",
+                "parameters": [
+                    {
+                        "type": "number",
+                        "description": "Максимальная средняя длина предложения, от 0 до 30",
+                        "name": "stylometry_avg_len",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerSampleListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerJWT": []
+                    }
+                ],
+                "description": "Первая строка поля text — автор; остальные строки — текст. Файлы загружаются в MinIO. CreatorID определяется по JWT.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API: образцы"
+                ],
+                "summary": "Создать или обновить черновик с изображением и видео",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Автор в первой строке и текстовый отрывок ниже",
+                        "name": "text",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Файл изображения",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Файл видео",
+                        "name": "video",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerCreatedDraftResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/samples/draft": {
+            "get": {
+                "security": [
+                    {
+                        "BearerJWT": []
+                    }
+                ],
+                "description": "Возвращает черновик пользователя из JWT. Если черновика нет, draft равен null.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API: образцы"
+                ],
+                "summary": "Черновик текущего пользователя",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerDraftResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/samples/draft/publish": {
+            "put": {
+                "security": [
+                    {
+                        "BearerJWT": []
+                    }
+                ],
+                "description": "Тело не требуется. Показатели текста пересчитываются при публикации своего черновика.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API: образцы"
+                ],
+                "summary": "Опубликовать черновик текущего пользователя",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerPublishedResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/samples/feed": {
+            "get": {
+                "description": "Без ID возвращает первый образец; с ID возвращает его, а при next=true следующий опубликованный образец.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API: образцы"
+                ],
+                "summary": "Опубликованный образец из ленты",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID образца",
+                        "name": "stylometry_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Строка true для следующего образца; другое значение означает false",
+                        "name": "next",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/serializer.SampleResponseDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/samples/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerJWT": []
+                    }
+                ],
+                "description": "Удаляет только собственный образец. Для чужого образца возвращает 403, для отсутствующего — 404.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API: образцы"
+                ],
+                "summary": "Логически удалить образец",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID образца",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerDeletedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/samples/{id}/like": {
+            "post": {
+                "security": [
+                    {
+                        "BearerJWT": []
+                    }
+                ],
+                "description": "JSON с stylometry_like или like: 1 ставит лайк, 0 снимает. Также принимается form-data. Лайк принадлежит пользователю из JWT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API: образцы"
+                ],
+                "summary": "Поставить или снять лайк",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID образца",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Одно из полей stylometry_like или like со значением 0 либо 1",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerLikeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerLikeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/users": {
+            "post": {
+                "description": "Принимает JSON или form-data с именем и паролем. Пароль сохраняется как bcrypt-хеш и не возвращается.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API: пользователи"
+                ],
+                "summary": "Зарегистрировать пользователя",
+                "parameters": [
+                    {
+                        "description": "Имя и пароль",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerRegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerRegisteredResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SwaggerErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/samples": {
+            "get": {
+                "description": "Доступен только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован.",
+                "tags": [
+                    "HTML: отключено по умолчанию"
+                ],
+                "summary": "Перейти к HTML-ленте",
+                "responses": {
+                    "302": {
+                        "description": "Переход на /samples/feed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/samples/delete": {
+            "post": {
+                "description": "Доступен только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован. После успеха перенаправляет на плитку.",
+                "consumes": [
+                    "application/x-www-form-urlencoded"
+                ],
+                "tags": [
+                    "HTML: отключено по умолчанию"
+                ],
+                "summary": "Логически удалить образец из HTML-формы",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID образца",
+                        "name": "stylometry_id",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "303": {
+                        "description": "Переход на /samples/grid",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/samples/draft": {
+            "get": {
+                "description": "Доступна только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован.",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "HTML: отключено по умолчанию"
+                ],
+                "summary": "HTML-страница черновика",
+                "responses": {
+                    "200": {
+                        "description": "HTML-страница",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Доступен только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован. После успеха перенаправляет на страницу черновика.",
+                "consumes": [
+                    "application/x-www-form-urlencoded"
+                ],
+                "tags": [
+                    "HTML: отключено по умолчанию"
+                ],
+                "summary": "Создать черновик из HTML-формы",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Автор текста; также принимается stylometry_title",
+                        "name": "stylometry_text_creator",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Резервное поле автора",
+                        "name": "stylometry_title",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Текстовый отрывок; также принимается stylometry_sample_descr",
+                        "name": "stylometry_descr",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Резервное поле текста",
+                        "name": "stylometry_sample_descr",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "URL изображения",
+                        "name": "stylometry_image_url",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "URL видео",
+                        "name": "stylometry_video_url",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "303": {
+                        "description": "Переход на /samples/draft",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/samples/draft/publish": {
+            "post": {
+                "description": "Доступен только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован. После успеха перенаправляет на плитку.",
+                "consumes": [
+                    "application/x-www-form-urlencoded"
+                ],
+                "tags": [
+                    "HTML: отключено по умолчанию"
+                ],
+                "summary": "Опубликовать черновик из HTML-формы",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Текстовый отрывок для публикации",
+                        "name": "stylometry_descr",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "303": {
+                        "description": "Переход на /samples/grid",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/samples/feed": {
+            "get": {
+                "description": "Доступна только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован.",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "HTML: отключено по умолчанию"
+                ],
+                "summary": "HTML-страница ленты",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID образца",
+                        "name": "stylometry_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Строка true для следующего образца",
+                        "name": "next",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HTML-страница",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/samples/grid": {
+            "get": {
+                "description": "Доступна только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован.",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "HTML: отключено по умолчанию"
+                ],
+                "summary": "HTML-страница плитки образцов",
+                "parameters": [
+                    {
+                        "type": "number",
+                        "description": "Максимальная средняя длина предложения, от 0 до 30",
+                        "name": "stylometry_avg_len",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HTML-страница",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "handler.SwaggerCreatedDraftResponse": {
+            "type": "object",
+            "properties": {
+                "draft": {
+                    "$ref": "#/definitions/serializer.SampleResponseDTO"
+                }
+            }
+        },
+        "handler.SwaggerDeletedResponse": {
+            "type": "object",
+            "properties": {
+                "deleted": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handler.SwaggerDraftResponse": {
+            "type": "object",
+            "properties": {
+                "draft": {
+                    "$ref": "#/definitions/serializer.SampleResponseDTO"
+                },
+                "has_draft": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handler.SwaggerErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.SwaggerLikeRequest": {
+            "type": "object",
+            "properties": {
+                "like": {
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "stylometry_like": {
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                }
+            }
+        },
+        "handler.SwaggerLikeResponse": {
+            "type": "object",
+            "properties": {
+                "liked": {
+                    "type": "boolean"
+                },
+                "sample": {
+                    "$ref": "#/definitions/serializer.SampleResponseDTO"
+                }
+            }
+        },
+        "handler.SwaggerLoginRequest": {
+            "type": "object",
+            "properties": {
+                "stylometry_sample_name": {
+                    "type": "string"
+                },
+                "stylometry_sample_password": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.SwaggerLoginResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "type": "integer",
+                    "example": 3600
+                },
+                "token_type": {
+                    "type": "string",
+                    "example": "Bearer"
+                }
+            }
+        },
+        "handler.SwaggerLogoutResponse": {
+            "type": "object",
+            "properties": {
+                "deauthenticated": {
+                    "type": "boolean"
+                },
+                "stylometry_auth_comment": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.SwaggerPublishedResponse": {
+            "type": "object",
+            "properties": {
+                "published": {
+                    "type": "boolean"
+                },
+                "sample": {
+                    "$ref": "#/definitions/serializer.SampleResponseDTO"
+                }
+            }
+        },
+        "handler.SwaggerRegisterRequest": {
+            "type": "object",
+            "properties": {
+                "stylometry_sample_name": {
+                    "type": "string"
+                },
+                "stylometry_sample_password": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.SwaggerRegisteredResponse": {
+            "type": "object",
+            "properties": {
+                "user": {
+                    "$ref": "#/definitions/serializer.UserResponseDTO"
+                }
+            }
+        },
+        "handler.SwaggerSampleListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/serializer.SampleResponseDTO"
+                    }
+                }
+            }
+        },
+        "serializer.SampleResponseDTO": {
+            "type": "object",
+            "properties": {
+                "is_liked": {
+                    "type": "integer"
+                },
+                "stylometry_sample_average_sentence_length": {
+                    "type": "number"
+                },
+                "stylometry_sample_conjunction_frequency": {
+                    "type": "number"
+                },
+                "stylometry_sample_created_at": {
+                    "type": "string"
+                },
+                "stylometry_sample_descr": {
+                    "type": "string"
+                },
+                "stylometry_sample_id": {
+                    "type": "integer"
+                },
+                "stylometry_sample_image_url": {
+                    "type": "string"
+                },
+                "stylometry_sample_is_current_user_creator": {
+                    "type": "integer"
+                },
+                "stylometry_sample_likes_count": {
+                    "type": "integer"
+                },
+                "stylometry_sample_text_creator": {
+                    "type": "string"
+                },
+                "stylometry_sample_updated_at": {
+                    "type": "string"
+                },
+                "stylometry_sample_video_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "serializer.UserResponseDTO": {
+            "type": "object",
+            "properties": {
+                "stylometry_sample_id": {
+                    "type": "integer"
+                },
+                "stylometry_sample_name": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerJWT": {
+            "description": "Токен выдаётся методом POST /api/auth/login. Передайте Authorization: Bearer \u003ctoken\u003e для защищённых операций.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

@@ -15,7 +15,7 @@ const (
 type User struct {
 	ID       uint   `gorm:"primaryKey;column:ID"`
 	Name     string `gorm:"column:Name;size:120;not null"`
-	Password string `gorm:"column:Password;size:255;not null;default:'stylometry123'"`
+	Password string `gorm:"column:Password;size:255;not null"`
 }
 
 // TableName returns the exact PostgreSQL table name for users.

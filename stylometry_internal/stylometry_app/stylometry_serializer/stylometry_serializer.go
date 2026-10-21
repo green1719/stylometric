@@ -23,12 +23,12 @@ type SampleResponseDTO struct {
 
 func SampleResponse(stylometry_sample model.Sample, stylometry_current_user_id uint) SampleResponseDTO {
 	stylometry_is_creator := 0
-	if stylometry_sample.CreatorID == stylometry_current_user_id {
+	if stylometry_current_user_id != 0 && stylometry_sample.CreatorID == stylometry_current_user_id {
 		stylometry_is_creator = 1
 	}
 	stylometry_is_liked := 0
 	for _, stylometry_like := range stylometry_sample.Likes {
-		if stylometry_like.UserID == stylometry_current_user_id {
+		if stylometry_current_user_id != 0 && stylometry_like.UserID == stylometry_current_user_id {
 			stylometry_is_liked = 1
 			break
 		}

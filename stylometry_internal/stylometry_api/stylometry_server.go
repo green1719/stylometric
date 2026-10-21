@@ -7,7 +7,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
+	_ "stylometry/stylometry_docs"
+	"stylometry/stylometry_internal/stylometry_app/stylometry_auth"
 	"stylometry/stylometry_internal/stylometry_app/stylometry_database"
 	"stylometry/stylometry_internal/stylometry_app/stylometry_handler"
 	"stylometry/stylometry_internal/stylometry_app/stylometry_repository"
@@ -15,43 +19,51 @@ import (
 
 func StartServer() {
 	log.Println("StylometrySample application start!")
+	issuer, err := auth.NewIssuerFromEnv()
+	if err != nil {
+		logrus.Fatal("ошибка конфигурации JWT: ", err)
+	}
 
 	db, err := database.NewDatabase()
 	if err != nil {
 		logrus.Fatal("ошибка подключения к базе данных стилометрии: ", err)
 	}
 	repo := repository.NewRepository(db)
-	sampleHandler := handler.NewSampleHandler(repo)
+	blacklist, err := auth.NewRedisBlacklistFromEnv()
+	if err != nil {
+		logrus.Fatal("ошибка подключения к Redis: ", err)
+	}
+	sampleHandler := handler.NewSampleHandler(repo, issuer, blacklist)
+	requireJWT := auth.RequireJWT(issuer, repo.UserExists, blacklist)
+	optionalJWT := auth.OptionalJWT(issuer, repo.UserExists, blacklist)
 
 	router := gin.Default()
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	if stylometryFrontendEnabled() {
 		router.LoadHTMLGlob("stylometry_templates/*")
 		router.Static("/stylometry_static", "./stylometry_static")
 
-		router.GET("/samples", func(stylometry_ctx *gin.Context) {
-			stylometry_ctx.Redirect(302, "/samples/feed")
-		})
+		router.GET("/samples", sampleHandler.RedirectToSampleFeed)
 		router.GET("/samples/feed", sampleHandler.GetSampleFeed)
-		router.GET("/samples/draft", sampleHandler.GetSampleDraft)
+		router.GET("/samples/draft", requireJWT, sampleHandler.GetSampleDraft)
 		router.GET("/samples/grid", sampleHandler.GetSampleGrid)
-		router.POST("/samples/draft", sampleHandler.PostSampleCreateDraft)
-		router.POST("/samples/draft/publish", sampleHandler.PostSamplePublishDraft)
-		router.POST("/samples/delete", sampleHandler.PostSampleDelete)
+		router.POST("/samples/draft", requireJWT, sampleHandler.PostSampleCreateDraft)
+		router.POST("/samples/draft/publish", requireJWT, sampleHandler.PostSamplePublishDraft)
+		router.POST("/samples/delete", requireJWT, sampleHandler.PostSampleDelete)
 	}
 
-	//3 labaa
 	apiRoutes := router.Group("/api")
 	{
-		apiRoutes.GET("/samples", sampleHandler.APIGetSampleList)
-		apiRoutes.GET("/samples/feed", sampleHandler.APIGetSampleFeed)
-		apiRoutes.GET("/samples/draft", sampleHandler.APIGetSampleDraft)
-		apiRoutes.POST("/samples", sampleHandler.APIPostSampleDraft)
-		apiRoutes.PUT("/samples/draft/publish", sampleHandler.APIPutSamplePublishDraft)
-		apiRoutes.DELETE("/samples/:id", sampleHandler.APIDeleteSample)
-		apiRoutes.POST("/samples/:id/like", sampleHandler.APIPostSampleLike)
+		apiRoutes.GET("/samples", optionalJWT, sampleHandler.APIGetSampleList)
+		apiRoutes.GET("/samples/feed", optionalJWT, sampleHandler.APIGetSampleFeed)
+		apiRoutes.GET("/samples/draft", requireJWT, sampleHandler.APIGetSampleDraft)
+		apiRoutes.POST("/samples", requireJWT, sampleHandler.APIPostSampleDraft)
+		apiRoutes.PUT("/samples/draft/publish", requireJWT, sampleHandler.APIPutSamplePublishDraft)
+		apiRoutes.DELETE("/samples/:id", requireJWT, sampleHandler.APIDeleteSample)
+		apiRoutes.POST("/samples/:id/like", requireJWT, sampleHandler.APIPostSampleLike)
 		apiRoutes.POST("/users", sampleHandler.APIPostUserRegister)
 		apiRoutes.POST("/auth/login", sampleHandler.APIPostAuthLogin)
-		apiRoutes.POST("/auth/logout", sampleHandler.APIPostAuthLogout)
+		apiRoutes.POST("/auth/logout", requireJWT, sampleHandler.APIPostAuthLogout)
 	}
 	log.Println("Server start up: http://127.0.0.1:8080/api/samples")
 	if err := router.Run(":8080"); err != nil {

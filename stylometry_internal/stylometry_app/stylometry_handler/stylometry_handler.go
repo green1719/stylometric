@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"stylometry/stylometry_internal/stylometry_app/stylometry_analysis"
+	"stylometry/stylometry_internal/stylometry_app/stylometry_auth"
 	"stylometry/stylometry_internal/stylometry_app/stylometry_model"
 	"stylometry/stylometry_internal/stylometry_app/stylometry_repository"
 )
@@ -22,12 +23,14 @@ const (
 
 // SampleHandler хранит зависимости HTTP-слоя.
 type SampleHandler struct {
-	Repository *repository.Repository
+	Repository  *repository.Repository
+	TokenIssuer *auth.Issuer
+	Blacklist   auth.Blacklist
 }
 
 // NewSampleHandler создаёт HTTP-контроллер.
-func NewSampleHandler(stylometry_r *repository.Repository) *SampleHandler {
-	return &SampleHandler{Repository: stylometry_r}
+func NewSampleHandler(stylometry_r *repository.Repository, stylometry_issuer *auth.Issuer, stylometry_blacklist auth.Blacklist) *SampleHandler {
+	return &SampleHandler{Repository: stylometry_r, TokenIssuer: stylometry_issuer, Blacklist: stylometry_blacklist}
 }
 
 // stylometryFormatLen красиво форматирует float64 для HTML.
@@ -41,7 +44,28 @@ func stylometryParseFloat(stylometry_raw string) (float64, error) {
 	return strconv.ParseFloat(stylometry_normalized, 64)
 }
 
-// GET /samples/feed — лента; БД возвращает одну опубликованную карточку.
+// RedirectToSampleFeed godoc
+// @Summary Перейти к HTML-ленте
+// @Description Доступен только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован.
+// @Tags HTML: отключено по умолчанию
+// @Success 302 {string} string "Переход на /samples/feed"
+// @Router /samples [get]
+func (stylometry_h *SampleHandler) RedirectToSampleFeed(stylometry_ctx *gin.Context) {
+	stylometry_ctx.Redirect(http.StatusFound, "/samples/feed")
+}
+
+// GetSampleFeed godoc
+// @Summary HTML-страница ленты
+// @Description Доступна только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован.
+// @Tags HTML: отключено по умолчанию
+// @Produce html
+// @Param stylometry_id query integer false "ID образца"
+// @Param next query string false "Строка true для следующего образца"
+// @Success 200 {string} string "HTML-страница"
+// @Failure 400 {string} string
+// @Failure 404 {string} string
+// @Failure 500 {string} string
+// @Router /samples/feed [get]
 func (stylometry_h *SampleHandler) GetSampleFeed(stylometry_ctx *gin.Context) {
 	stylometry_raw_id := strings.TrimSpace(stylometry_ctx.Query("stylometry_id"))
 	stylometry_next := strings.EqualFold(strings.TrimSpace(stylometry_ctx.Query("next")), "true")
@@ -71,9 +95,16 @@ func (stylometry_h *SampleHandler) GetSampleFeed(stylometry_ctx *gin.Context) {
 	stylometry_ctx.HTML(http.StatusOK, "stylometry_feed.html", gin.H{"stylometry_sample": stylometry_sample})
 }
 
-// GET /samples/draft — страница добавления или публикации черновика.
+// GetSampleDraft godoc
+// @Summary HTML-страница черновика
+// @Description Доступна только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован.
+// @Tags HTML: отключено по умолчанию
+// @Produce html
+// @Success 200 {string} string "HTML-страница"
+// @Failure 500 {string} string
+// @Router /samples/draft [get]
 func (stylometry_h *SampleHandler) GetSampleDraft(stylometry_ctx *gin.Context) {
-	stylometry_draft, stylometry_has_draft, stylometry_err := stylometry_h.Repository.DraftSample()
+	stylometry_draft, stylometry_has_draft, stylometry_err := stylometry_h.Repository.DraftSample(auth.UserID(stylometry_ctx))
 	if stylometry_err != nil {
 		logrus.Error(stylometry_err)
 		stylometry_ctx.String(http.StatusInternalServerError, "ошибка базы данных")
@@ -96,7 +127,21 @@ func (stylometry_h *SampleHandler) GetSampleDraft(stylometry_ctx *gin.Context) {
 	})
 }
 
-// POST /samples/draft — создаёт черновик через ORM.
+// PostSampleCreateDraft godoc
+// @Summary Создать черновик из HTML-формы
+// @Description Доступен только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован. После успеха перенаправляет на страницу черновика.
+// @Tags HTML: отключено по умолчанию
+// @Accept application/x-www-form-urlencoded
+// @Param stylometry_text_creator formData string false "Автор текста; также принимается stylometry_title"
+// @Param stylometry_title formData string false "Резервное поле автора"
+// @Param stylometry_descr formData string false "Текстовый отрывок; также принимается stylometry_sample_descr"
+// @Param stylometry_sample_descr formData string false "Резервное поле текста"
+// @Param stylometry_image_url formData string false "URL изображения"
+// @Param stylometry_video_url formData string false "URL видео"
+// @Success 303 {string} string "Переход на /samples/draft"
+// @Failure 400 {string} string
+// @Failure 500 {string} string
+// @Router /samples/draft [post]
 func (stylometry_h *SampleHandler) PostSampleCreateDraft(stylometry_ctx *gin.Context) {
 	stylometry_text_creator := strings.TrimSpace(stylometry_ctx.PostForm("stylometry_text_creator"))
 	if stylometry_text_creator == "" {
@@ -117,7 +162,7 @@ func (stylometry_h *SampleHandler) PostSampleCreateDraft(stylometry_ctx *gin.Con
 	stylometry_image_url := strings.TrimSpace(stylometry_ctx.PostForm("stylometry_image_url"))
 	stylometry_video_url := strings.TrimSpace(stylometry_ctx.PostForm("stylometry_video_url"))
 
-	_, stylometry_err := stylometry_h.Repository.CreateDraft(stylometry_text_creator, stylometry_description, stylometry_image_url, stylometry_video_url)
+	_, stylometry_err := stylometry_h.Repository.CreateDraft(auth.UserID(stylometry_ctx), stylometry_text_creator, stylometry_description, stylometry_image_url, stylometry_video_url)
 	if stylometry_err != nil {
 		logrus.Error(stylometry_err)
 		stylometry_ctx.String(http.StatusInternalServerError, "не удалось создать черновик")
@@ -127,12 +172,21 @@ func (stylometry_h *SampleHandler) PostSampleCreateDraft(stylometry_ctx *gin.Con
 	stylometry_ctx.Redirect(http.StatusSeeOther, "/samples/draft")
 }
 
-// POST /samples/draft/publish — публикует черновик через ORM.
+// PostSamplePublishDraft godoc
+// @Summary Опубликовать черновик из HTML-формы
+// @Description Доступен только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован. После успеха перенаправляет на плитку.
+// @Tags HTML: отключено по умолчанию
+// @Accept application/x-www-form-urlencoded
+// @Param stylometry_descr formData string false "Текстовый отрывок для публикации"
+// @Success 303 {string} string "Переход на /samples/grid"
+// @Failure 500 {string} string
+// @Router /samples/draft/publish [post]
 func (stylometry_h *SampleHandler) PostSamplePublishDraft(stylometry_ctx *gin.Context) {
 	stylometry_description := strings.TrimSpace(stylometry_ctx.PostForm("stylometry_descr"))
 	stylometry_metrics := analysis.AnalyzeText(stylometry_description)
 
 	stylometry_err := stylometry_h.Repository.PublishDraft(
+		auth.UserID(stylometry_ctx),
 		stylometry_description,
 		stylometry_metrics.AverageSentenceLength,
 		stylometry_metrics.ConjunctionFrequency,
@@ -146,7 +200,16 @@ func (stylometry_h *SampleHandler) PostSamplePublishDraft(stylometry_ctx *gin.Co
 	stylometry_ctx.Redirect(http.StatusSeeOther, "/samples/grid")
 }
 
-// POST /samples/delete — логически удаляет карточку через SQL UPDATE.
+// PostSampleDelete godoc
+// @Summary Логически удалить образец из HTML-формы
+// @Description Доступен только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован. После успеха перенаправляет на плитку.
+// @Tags HTML: отключено по умолчанию
+// @Accept application/x-www-form-urlencoded
+// @Param stylometry_id formData integer true "ID образца"
+// @Success 303 {string} string "Переход на /samples/grid"
+// @Failure 400 {string} string
+// @Failure 500 {string} string
+// @Router /samples/delete [post]
 func (stylometry_h *SampleHandler) PostSampleDelete(stylometry_ctx *gin.Context) {
 	stylometry_raw_id := strings.TrimSpace(stylometry_ctx.PostForm("stylometry_id"))
 	stylometry_id, stylometry_err := strconv.ParseUint(stylometry_raw_id, 10, 64)
@@ -155,7 +218,7 @@ func (stylometry_h *SampleHandler) PostSampleDelete(stylometry_ctx *gin.Context)
 		return
 	}
 
-	stylometry_err = stylometry_h.Repository.DeleteSampleSQL(uint(stylometry_id))
+	stylometry_err = stylometry_h.Repository.DeleteSampleSQL(auth.UserID(stylometry_ctx), uint(stylometry_id))
 	if stylometry_err != nil {
 		logrus.Error(stylometry_err)
 		stylometry_ctx.String(http.StatusInternalServerError, "не удалось удалить карточку")
@@ -165,7 +228,16 @@ func (stylometry_h *SampleHandler) PostSampleDelete(stylometry_ctx *gin.Context)
 	stylometry_ctx.Redirect(http.StatusSeeOther, "/samples/grid")
 }
 
-// GET /samples/grid — плитка с фильтром по средней длине.
+// GetSampleGrid godoc
+// @Summary HTML-страница плитки образцов
+// @Description Доступна только при ENABLE_FRONTEND=true; по умолчанию маршрут не зарегистрирован.
+// @Tags HTML: отключено по умолчанию
+// @Produce html
+// @Param stylometry_avg_len query number false "Максимальная средняя длина предложения, от 0 до 30"
+// @Success 200 {string} string "HTML-страница"
+// @Failure 400 {string} string
+// @Failure 500 {string} string
+// @Router /samples/grid [get]
 func (stylometry_h *SampleHandler) GetSampleGrid(stylometry_ctx *gin.Context) {
 	stylometry_raw_filter := strings.TrimSpace(stylometry_ctx.Query("stylometry_avg_len"))
 

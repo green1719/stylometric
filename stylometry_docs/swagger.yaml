@@ -1,0 +1,685 @@
+basePath: /
+definitions:
+  handler.SwaggerCreatedDraftResponse:
+    properties:
+      draft:
+        $ref: '#/definitions/serializer.SampleResponseDTO'
+    type: object
+  handler.SwaggerDeletedResponse:
+    properties:
+      deleted:
+        type: boolean
+    type: object
+  handler.SwaggerDraftResponse:
+    properties:
+      draft:
+        $ref: '#/definitions/serializer.SampleResponseDTO'
+      has_draft:
+        type: boolean
+    type: object
+  handler.SwaggerErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  handler.SwaggerLikeRequest:
+    properties:
+      like:
+        enum:
+        - 0
+        - 1
+        type: integer
+      stylometry_like:
+        enum:
+        - 0
+        - 1
+        type: integer
+    type: object
+  handler.SwaggerLikeResponse:
+    properties:
+      liked:
+        type: boolean
+      sample:
+        $ref: '#/definitions/serializer.SampleResponseDTO'
+    type: object
+  handler.SwaggerLoginRequest:
+    properties:
+      stylometry_sample_name:
+        type: string
+      stylometry_sample_password:
+        type: string
+    type: object
+  handler.SwaggerLoginResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        example: 3600
+        type: integer
+      token_type:
+        example: Bearer
+        type: string
+    type: object
+  handler.SwaggerLogoutResponse:
+    properties:
+      deauthenticated:
+        type: boolean
+      stylometry_auth_comment:
+        type: string
+    type: object
+  handler.SwaggerPublishedResponse:
+    properties:
+      published:
+        type: boolean
+      sample:
+        $ref: '#/definitions/serializer.SampleResponseDTO'
+    type: object
+  handler.SwaggerRegisterRequest:
+    properties:
+      stylometry_sample_name:
+        type: string
+      stylometry_sample_password:
+        type: string
+    type: object
+  handler.SwaggerRegisteredResponse:
+    properties:
+      user:
+        $ref: '#/definitions/serializer.UserResponseDTO'
+    type: object
+  handler.SwaggerSampleListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/serializer.SampleResponseDTO'
+        type: array
+    type: object
+  serializer.SampleResponseDTO:
+    properties:
+      is_liked:
+        type: integer
+      stylometry_sample_average_sentence_length:
+        type: number
+      stylometry_sample_conjunction_frequency:
+        type: number
+      stylometry_sample_created_at:
+        type: string
+      stylometry_sample_descr:
+        type: string
+      stylometry_sample_id:
+        type: integer
+      stylometry_sample_image_url:
+        type: string
+      stylometry_sample_is_current_user_creator:
+        type: integer
+      stylometry_sample_likes_count:
+        type: integer
+      stylometry_sample_text_creator:
+        type: string
+      stylometry_sample_updated_at:
+        type: string
+      stylometry_sample_video_url:
+        type: string
+    type: object
+  serializer.UserResponseDTO:
+    properties:
+      stylometry_sample_id:
+        type: integer
+      stylometry_sample_name:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: 'REST API текстовых образцов: список, лента, черновики, публикация,
+    лайки и пользователи. Вход выдаёт JWT; операции создателя требуют Bearer JWT.
+    HTML-маршруты доступны только при ENABLE_FRONTEND=true.'
+  title: Stylometry API
+  version: "1.0"
+paths:
+  /api/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Проверяет пароль по bcrypt-хешу и выдаёт подписанный access token
+        на 1 час.
+      parameters:
+      - description: Имя и пароль
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SwaggerLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.SwaggerLoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+      summary: Войти и получить JWT
+      tags:
+      - 'API: вход'
+  /api/auth/logout:
+    post:
+      description: Сохраняет jti текущего JWT в Redis blacklist до окончания его срока
+        действия. Повторный выход с тем же токеном возвращает 401.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.SwaggerLogoutResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+      security:
+      - BearerJWT: []
+      summary: Выйти и отозвать JWT
+      tags:
+      - 'API: вход'
+  /api/samples:
+    get:
+      description: Без фильтра возвращает все опубликованные образцы. Без JWT признаки
+        владельца и лайка равны 0; с действительным JWT вычисляются для вошедшего
+        пользователя.
+      parameters:
+      - description: Максимальная средняя длина предложения, от 0 до 30
+        in: query
+        name: stylometry_avg_len
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.SwaggerSampleListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+      summary: Список опубликованных образцов
+      tags:
+      - 'API: образцы'
+    post:
+      consumes:
+      - multipart/form-data
+      description: Первая строка поля text — автор; остальные строки — текст. Файлы
+        загружаются в MinIO. CreatorID определяется по JWT.
+      parameters:
+      - description: Автор в первой строке и текстовый отрывок ниже
+        in: formData
+        name: text
+        required: true
+        type: string
+      - description: Файл изображения
+        in: formData
+        name: image
+        required: true
+        type: file
+      - description: Файл видео
+        in: formData
+        name: video
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.SwaggerCreatedDraftResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+      security:
+      - BearerJWT: []
+      summary: Создать или обновить черновик с изображением и видео
+      tags:
+      - 'API: образцы'
+  /api/samples/{id}:
+    delete:
+      description: Удаляет только собственный образец. Для чужого образца возвращает
+        403, для отсутствующего — 404.
+      parameters:
+      - description: ID образца
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.SwaggerDeletedResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+      security:
+      - BearerJWT: []
+      summary: Логически удалить образец
+      tags:
+      - 'API: образцы'
+  /api/samples/{id}/like:
+    post:
+      consumes:
+      - application/json
+      description: 'JSON с stylometry_like или like: 1 ставит лайк, 0 снимает. Также
+        принимается form-data. Лайк принадлежит пользователю из JWT.'
+      parameters:
+      - description: ID образца
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Одно из полей stylometry_like или like со значением 0 либо 1
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SwaggerLikeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.SwaggerLikeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+      security:
+      - BearerJWT: []
+      summary: Поставить или снять лайк
+      tags:
+      - 'API: образцы'
+  /api/samples/draft:
+    get:
+      description: Возвращает черновик пользователя из JWT. Если черновика нет, draft
+        равен null.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.SwaggerDraftResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+      security:
+      - BearerJWT: []
+      summary: Черновик текущего пользователя
+      tags:
+      - 'API: образцы'
+  /api/samples/draft/publish:
+    put:
+      description: Тело не требуется. Показатели текста пересчитываются при публикации
+        своего черновика.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.SwaggerPublishedResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+      security:
+      - BearerJWT: []
+      summary: Опубликовать черновик текущего пользователя
+      tags:
+      - 'API: образцы'
+  /api/samples/feed:
+    get:
+      description: Без ID возвращает первый образец; с ID возвращает его, а при next=true
+        следующий опубликованный образец.
+      parameters:
+      - description: ID образца
+        in: query
+        name: stylometry_id
+        type: integer
+      - description: Строка true для следующего образца; другое значение означает
+          false
+        in: query
+        name: next
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/serializer.SampleResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+      summary: Опубликованный образец из ленты
+      tags:
+      - 'API: образцы'
+  /api/users:
+    post:
+      consumes:
+      - application/json
+      description: Принимает JSON или form-data с именем и паролем. Пароль сохраняется
+        как bcrypt-хеш и не возвращается.
+      parameters:
+      - description: Имя и пароль
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SwaggerRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.SwaggerRegisteredResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.SwaggerErrorResponse'
+      summary: Зарегистрировать пользователя
+      tags:
+      - 'API: пользователи'
+  /samples:
+    get:
+      description: Доступен только при ENABLE_FRONTEND=true; по умолчанию маршрут
+        не зарегистрирован.
+      responses:
+        "302":
+          description: Переход на /samples/feed
+          schema:
+            type: string
+      summary: Перейти к HTML-ленте
+      tags:
+      - 'HTML: отключено по умолчанию'
+  /samples/delete:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Доступен только при ENABLE_FRONTEND=true; по умолчанию маршрут
+        не зарегистрирован. После успеха перенаправляет на плитку.
+      parameters:
+      - description: ID образца
+        in: formData
+        name: stylometry_id
+        required: true
+        type: integer
+      responses:
+        "303":
+          description: Переход на /samples/grid
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Логически удалить образец из HTML-формы
+      tags:
+      - 'HTML: отключено по умолчанию'
+  /samples/draft:
+    get:
+      description: Доступна только при ENABLE_FRONTEND=true; по умолчанию маршрут
+        не зарегистрирован.
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML-страница
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: HTML-страница черновика
+      tags:
+      - 'HTML: отключено по умолчанию'
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Доступен только при ENABLE_FRONTEND=true; по умолчанию маршрут
+        не зарегистрирован. После успеха перенаправляет на страницу черновика.
+      parameters:
+      - description: Автор текста; также принимается stylometry_title
+        in: formData
+        name: stylometry_text_creator
+        type: string
+      - description: Резервное поле автора
+        in: formData
+        name: stylometry_title
+        type: string
+      - description: Текстовый отрывок; также принимается stylometry_sample_descr
+        in: formData
+        name: stylometry_descr
+        type: string
+      - description: Резервное поле текста
+        in: formData
+        name: stylometry_sample_descr
+        type: string
+      - description: URL изображения
+        in: formData
+        name: stylometry_image_url
+        type: string
+      - description: URL видео
+        in: formData
+        name: stylometry_video_url
+        type: string
+      responses:
+        "303":
+          description: Переход на /samples/draft
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Создать черновик из HTML-формы
+      tags:
+      - 'HTML: отключено по умолчанию'
+  /samples/draft/publish:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Доступен только при ENABLE_FRONTEND=true; по умолчанию маршрут
+        не зарегистрирован. После успеха перенаправляет на плитку.
+      parameters:
+      - description: Текстовый отрывок для публикации
+        in: formData
+        name: stylometry_descr
+        type: string
+      responses:
+        "303":
+          description: Переход на /samples/grid
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Опубликовать черновик из HTML-формы
+      tags:
+      - 'HTML: отключено по умолчанию'
+  /samples/feed:
+    get:
+      description: Доступна только при ENABLE_FRONTEND=true; по умолчанию маршрут
+        не зарегистрирован.
+      parameters:
+      - description: ID образца
+        in: query
+        name: stylometry_id
+        type: integer
+      - description: Строка true для следующего образца
+        in: query
+        name: next
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML-страница
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: HTML-страница ленты
+      tags:
+      - 'HTML: отключено по умолчанию'
+  /samples/grid:
+    get:
+      description: Доступна только при ENABLE_FRONTEND=true; по умолчанию маршрут
+        не зарегистрирован.
+      parameters:
+      - description: Максимальная средняя длина предложения, от 0 до 30
+        in: query
+        name: stylometry_avg_len
+        type: number
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML-страница
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: HTML-страница плитки образцов
+      tags:
+      - 'HTML: отключено по умолчанию'
+securityDefinitions:
+  BearerJWT:
+    description: 'Токен выдаётся методом POST /api/auth/login. Передайте Authorization:
+      Bearer <token> для защищённых операций.'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

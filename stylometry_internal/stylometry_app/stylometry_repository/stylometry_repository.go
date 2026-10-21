@@ -14,7 +14,7 @@ import (
 
 	"stylometry/stylometry_internal/stylometry_app/stylometry_analysis"
 	"stylometry/stylometry_internal/stylometry_app/stylometry_model"
-	"stylometry/stylometry_internal/stylometry_app/stylometry_session"
+	"stylometry/stylometry_internal/stylometry_app/stylometry_password"
 )
 
 const DefaultImagePath = "/stylometry_static/stylometry_default_image.svg"
@@ -37,10 +37,6 @@ type Repository struct {
 // NewRepository создаёт репозиторий.
 func NewRepository(stylometry_db *gorm.DB) *Repository {
 	return &Repository{DB: stylometry_db}
-}
-
-func stylometryCurrentUserID() uint {
-	return stylometry_session.CurrentUser().ID
 }
 
 // PublishedSamples возвращает только опубликованные карточки.
@@ -110,9 +106,9 @@ func (stylometry_repository *Repository) SampleByID(stylometry_id uint) (model.S
 }
 
 // DraftSample возвращает черновик текущего пользователя.
-func (stylometry_repository *Repository) DraftSample() (model.Sample, bool, error) {
+func (stylometry_repository *Repository) DraftSample(stylometry_user_id uint) (model.Sample, bool, error) {
 	var stylometry_sample model.Sample
-	stylometry_err := stylometry_repository.DB.Preload("Likes").Where("\"CreatorID\" = ? AND \"Status\" = ?", stylometryCurrentUserID(), model.StatusDraft).First(&stylometry_sample).Error
+	stylometry_err := stylometry_repository.DB.Preload("Likes").Where("\"CreatorID\" = ? AND \"Status\" = ?", stylometry_user_id, model.StatusDraft).First(&stylometry_sample).Error
 	if errors.Is(stylometry_err, gorm.ErrRecordNotFound) {
 		return model.Sample{}, false, nil
 	}
@@ -124,8 +120,8 @@ func (stylometry_repository *Repository) DraftSample() (model.Sample, bool, erro
 }
 
 // CreateDraft создаёт или обновляет черновик при нажатии кнопки "Далее".
-func (stylometry_repository *Repository) CreateDraft(stylometry_text_creator string, stylometry_text string, stylometry_image_url string, stylometry_video_url string) (model.Sample, error) {
-	stylometry_existing, stylometry_found, stylometry_err := stylometry_repository.DraftSample()
+func (stylometry_repository *Repository) CreateDraft(stylometry_user_id uint, stylometry_text_creator string, stylometry_text string, stylometry_image_url string, stylometry_video_url string) (model.Sample, error) {
+	stylometry_existing, stylometry_found, stylometry_err := stylometry_repository.DraftSample(stylometry_user_id)
 	if stylometry_err != nil {
 		return model.Sample{}, stylometry_err
 	}
@@ -152,7 +148,7 @@ func (stylometry_repository *Repository) CreateDraft(stylometry_text_creator str
 			"ConjunctionFrequency":  stylometry_metrics.ConjunctionFrequency,
 		}
 		stylometry_err = stylometry_repository.DB.Model(&model.Sample{}).
-			Where("\"ID\" = ?", stylometry_existing.ID).
+			Where("\"ID\" = ? AND \"CreatorID\" = ?", stylometry_existing.ID, stylometry_user_id).
 			Updates(stylometry_updates).Error
 		if stylometry_err != nil {
 			return model.Sample{}, stylometry_err
@@ -175,7 +171,7 @@ func (stylometry_repository *Repository) CreateDraft(stylometry_text_creator str
 		VideoURL:              stylometry_video_url,
 		AverageSentenceLength: stylometry_metrics.AverageSentenceLength,
 		ConjunctionFrequency:  stylometry_metrics.ConjunctionFrequency,
-		CreatorID:             stylometryCurrentUserID(),
+		CreatorID:             stylometry_user_id,
 	}
 	stylometry_err = stylometry_repository.DB.Create(&stylometry_sample).Error
 	if stylometry_err != nil {
@@ -186,9 +182,9 @@ func (stylometry_repository *Repository) CreateDraft(stylometry_text_creator str
 }
 
 // PublishDraft публикует черновик текущего пользователя.
-func (stylometry_repository *Repository) PublishDraft(stylometry_description string, stylometry_avg_len float64, stylometry_conj_freq float64) error {
+func (stylometry_repository *Repository) PublishDraft(stylometry_user_id uint, stylometry_description string, stylometry_avg_len float64, stylometry_conj_freq float64) error {
 	stylometry_updated_at := time.Now()
-	stylometry_result := stylometry_repository.DB.Model(&model.Sample{}).Where("\"CreatorID\" = ? AND \"Status\" = ?", stylometryCurrentUserID(), model.StatusDraft).Updates(map[string]interface{}{"ShortDescription": stylometry_description, "AverageSentenceLength": stylometry_avg_len, "ConjunctionFrequency": stylometry_conj_freq, "Status": model.StatusPublished, "UpdatedAt": &stylometry_updated_at})
+	stylometry_result := stylometry_repository.DB.Model(&model.Sample{}).Where("\"CreatorID\" = ? AND \"Status\" = ?", stylometry_user_id, model.StatusDraft).Updates(map[string]interface{}{"ShortDescription": stylometry_description, "AverageSentenceLength": stylometry_avg_len, "ConjunctionFrequency": stylometry_conj_freq, "Status": model.StatusPublished, "UpdatedAt": &stylometry_updated_at})
 	if stylometry_result.Error != nil {
 		return stylometry_result.Error
 	}
@@ -199,7 +195,7 @@ func (stylometry_repository *Repository) PublishDraft(stylometry_description str
 }
 
 // SetLike ставит или снимает лайк текущего пользователя у опубликованной карточки.
-func (stylometry_repository *Repository) SetLike(stylometry_id uint, stylometry_like_value int) (bool, error) {
+func (stylometry_repository *Repository) SetLike(stylometry_user_id uint, stylometry_id uint, stylometry_like_value int) (bool, error) {
 	var stylometry_count int64
 	stylometry_err := stylometry_repository.DB.Model(&model.Sample{}).
 		Where("\"ID\" = ? AND \"Status\" = ?", stylometry_id, model.StatusPublished).
@@ -212,7 +208,7 @@ func (stylometry_repository *Repository) SetLike(stylometry_id uint, stylometry_
 	}
 
 	stylometry_like := model.Like{
-		UserID:   stylometryCurrentUserID(),
+		UserID:   stylometry_user_id,
 		SampleID: stylometry_id,
 	}
 
@@ -222,26 +218,72 @@ func (stylometry_repository *Repository) SetLike(stylometry_id uint, stylometry_
 	}
 
 	stylometry_err = stylometry_repository.DB.
-		Where("\"UserID\" = ? AND \"SampleID\" = ?", stylometryCurrentUserID(), stylometry_id).
+		Where("\"UserID\" = ? AND \"SampleID\" = ?", stylometry_user_id, stylometry_id).
 		Delete(&model.Like{}).Error
 	return true, stylometry_err
 }
 
-// RegisterUser создаёт нового пользователя для показа пользовательского домена API.
-func (stylometry_repository *Repository) RegisterUser(stylometry_name string, stylometry_password string) (model.User, error) {
-	stylometry_user := model.User{
-		Name:     stylometry_name,
-		Password: stylometry_password,
-	}
-	stylometry_err := stylometry_repository.DB.Create(&stylometry_user).Error
+// RegisterUser создаёт пользователя с bcrypt-хешем пароля.
+func (stylometry_repository *Repository) RegisterUser(
+	stylometry_name string,
+	stylometry_raw_password string,
+) (model.User, error) {
+	stylometry_hash, stylometry_err := password.Hash(stylometry_raw_password)
 	if stylometry_err != nil {
 		return model.User{}, stylometry_err
 	}
+
+	stylometry_user := model.User{
+		Name:     stylometry_name,
+		Password: stylometry_hash,
+	}
+
+	if stylometry_err := stylometry_repository.DB.Create(&stylometry_user).Error; stylometry_err != nil {
+		return model.User{}, stylometry_err
+	}
+
 	return stylometry_user, nil
 }
 
+// UserByName находит пользователя для будущей проверки пароля при входе.
+func (stylometry_repository *Repository) UserByName(
+	stylometry_name string,
+) (model.User, error) {
+	var stylometry_user model.User
+
+	stylometry_err := stylometry_repository.DB.
+		Where(`"Name" = ?`, stylometry_name).
+		First(&stylometry_user).Error
+
+	return stylometry_user, stylometry_err
+}
+
+// UserExists подтверждает, что sub токена указывает на существующего пользователя.
+func (stylometry_repository *Repository) UserExists(stylometry_user_id uint) (bool, error) {
+	var stylometry_count int64
+	stylometry_err := stylometry_repository.DB.Model(&model.User{}).
+		Where(`"ID" = ?`, stylometry_user_id).
+		Count(&stylometry_count).Error
+	return stylometry_count == 1, stylometry_err
+}
+
+// SampleOwnerID находит владельца существующей неудалённой карточки.
+func (stylometry_repository *Repository) SampleOwnerID(stylometry_id uint) (uint, bool, error) {
+	var stylometry_sample model.Sample
+	stylometry_err := stylometry_repository.DB.Select("CreatorID").
+		Where(`"ID" = ? AND "Status" <> ?`, stylometry_id, model.StatusDeleted).
+		First(&stylometry_sample).Error
+	if errors.Is(stylometry_err, gorm.ErrRecordNotFound) {
+		return 0, false, nil
+	}
+	if stylometry_err != nil {
+		return 0, false, stylometry_err
+	}
+	return stylometry_sample.CreatorID, true, nil
+}
+
 // DeleteSampleSQL логически удаляет карточку через явный курсор PostgreSQL.
-func (stylometry_repository *Repository) DeleteSampleSQL(stylometry_id uint) (stylometry_err error) {
+func (stylometry_repository *Repository) DeleteSampleSQL(stylometry_user_id uint, stylometry_id uint) (stylometry_err error) {
 	stylometry_sql_db, stylometry_err := stylometry_repository.DB.DB()
 	if stylometry_err != nil {
 		return stylometry_err
@@ -269,7 +311,7 @@ func (stylometry_repository *Repository) DeleteSampleSQL(stylometry_id uint) (st
 	// Курсор выбирает и блокирует именно доступную текущему пользователю карточку.
 	_, stylometry_err = stylometry_tx.ExecContext(stylometry_context,
 		"DECLARE stylometry_sample_delete_cursor NO SCROLL CURSOR FOR SELECT \"ID\" FROM \"StylometrySamples\" WHERE \"ID\" = $1 AND \"Status\" <> $2 AND \"CreatorID\" = $3 FOR UPDATE",
-		stylometry_id, string(model.StatusDeleted), stylometryCurrentUserID())
+		stylometry_id, string(model.StatusDeleted), stylometry_user_id)
 	if stylometry_err != nil {
 		return stylometry_err
 	}
@@ -286,7 +328,7 @@ func (stylometry_repository *Repository) DeleteSampleSQL(stylometry_id uint) (st
 
 	stylometry_result, stylometry_err := stylometry_tx.ExecContext(stylometry_context,
 		"UPDATE \"StylometrySamples\" SET \"Status\" = $1 WHERE \"ID\" = $2 AND \"Status\" <> $3 AND \"CreatorID\" = $4",
-		string(model.StatusDeleted), stylometry_deleted_id, string(model.StatusDeleted), stylometryCurrentUserID())
+		string(model.StatusDeleted), stylometry_deleted_id, string(model.StatusDeleted), stylometry_user_id)
 	if stylometry_err != nil {
 		return stylometry_err
 	}

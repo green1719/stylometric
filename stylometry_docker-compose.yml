@@ -53,6 +53,17 @@ services:
       && mc mb --ignore-existing local/${MINIO_BUCKET:-stylometry}
       && mc anonymous set download local/${MINIO_BUCKET:-stylometry}"
 
+  redis:
+    image: redis:7.4.11-alpine3.21
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "always"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   app:
     build:
       context: .
@@ -71,6 +82,10 @@ services:
       DB_PASS: ${DB_PASS:-stylometry_password}
       DB_NAME: ${DB_NAME:-stylometry_db}
       ENABLE_FRONTEND: ${ENABLE_FRONTEND:-false}
+      JWT_SECRET: ${JWT_SECRET:?задайте JWT_SECRET в .env}
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: ${REDIS_DB:-0}
     depends_on:
       postgres:
         condition: service_healthy
@@ -78,7 +93,10 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
 volumes:
   minio-data:
   postgres-data:
+  redis-data:

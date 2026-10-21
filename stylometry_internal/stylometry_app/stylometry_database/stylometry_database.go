@@ -5,12 +5,14 @@ import (
 	"os"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"stylometry/stylometry_internal/stylometry_app/stylometry_analysis"
 	"stylometry/stylometry_internal/stylometry_app/stylometry_model"
+	"stylometry/stylometry_internal/stylometry_app/stylometry_password"
 )
 
 // NewDatabase создаёт подключение к БД, миграции и стартовые данные.
@@ -34,7 +36,6 @@ func NewDatabase() (*gorm.DB, error) {
 	if stylometry_err = stylometryMigrateSchemaNames(stylometry_db); stylometry_err != nil {
 		return nil, stylometry_err
 	}
-
 	stylometry_err = stylometry_db.AutoMigrate(
 		&model.User{},
 		&model.Sample{},
@@ -43,7 +44,15 @@ func NewDatabase() (*gorm.DB, error) {
 	if stylometry_err != nil {
 		return nil, stylometry_err
 	}
-	if stylometry_err = stylometryEnsureDraftIndex(stylometry_db); stylometry_err != nil {
+	if stylometry_err = stylometry_db.Exec(
+		`ALTER TABLE "Users" ALTER COLUMN "Password" DROP DEFAULT`,
+	).Error; stylometry_err != nil {
+		return nil, stylometry_err
+	}
+	if stylometry_err = stylometryMigrateLegacyPasswords(stylometry_db); stylometry_err != nil {
+		return nil, stylometry_err
+	}
+	if stylometry_err = stylometryEnsureIndexes(stylometry_db); stylometry_err != nil {
 		return nil, stylometry_err
 	}
 
@@ -52,6 +61,40 @@ func NewDatabase() (*gorm.DB, error) {
 	}
 
 	return stylometry_db, nil
+}
+
+// stylometryMigrateLegacyPasswords заменяет обычные пароли на bcrypt-хеши.
+// Повторный запуск пропускает строки, где уже лежит корректный bcrypt-хеш.
+func stylometryMigrateLegacyPasswords(stylometry_db *gorm.DB) error {
+	return stylometry_db.Transaction(func(stylometry_tx *gorm.DB) error {
+		var stylometry_users []model.User
+		if stylometry_err := stylometry_tx.Find(&stylometry_users).Error; stylometry_err != nil {
+			return stylometry_err
+		}
+
+		for _, stylometry_user := range stylometry_users {
+			if _, stylometry_err := bcrypt.Cost(
+				[]byte(stylometry_user.Password),
+			); stylometry_err == nil {
+				continue
+			}
+
+			stylometry_hash, stylometry_err := password.Hash(
+				stylometry_user.Password,
+			)
+			if stylometry_err != nil {
+				return stylometry_err
+			}
+
+			if stylometry_err := stylometry_tx.Model(&model.User{}).
+				Where(`"ID" = ?`, stylometry_user.ID).
+				UpdateColumn("Password", stylometry_hash).Error; stylometry_err != nil {
+				return stylometry_err
+			}
+		}
+
+		return nil
+	})
 }
 
 func stylometryMigrateLegacySchema(stylometry_db *gorm.DB) error {
@@ -287,8 +330,9 @@ func stylometryRenameLegacyPrimaryKeys(stylometry_db *gorm.DB) error {
 	return nil
 }
 
-func stylometryEnsureDraftIndex(stylometry_db *gorm.DB) error {
+func stylometryEnsureIndexes(stylometry_db *gorm.DB) error {
 	for _, stylometry_sql := range []string{
+		`CREATE UNIQUE INDEX IF NOT EXISTS "idx_users_name_unique" ON "Users" ("Name")`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS "idx_one_draft_per_user" ON "StylometrySamples" ("CreatorID") WHERE "Status" = 'draft'`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS "idx_user_sample_like" ON "Likes" ("UserID", "SampleID")`,
 	} {
@@ -322,7 +366,10 @@ func stylometryEnv(stylometry_key string, stylometry_fallback string) string {
 
 // seedDatabase создаёт стартовые данные для показа лабораторной.
 func seedDatabase(stylometry_db *gorm.DB) error {
-	stylometry_users := stylometrySeedUsers()
+	stylometry_users, stylometry_err := stylometrySeedUsers()
+	if stylometry_err != nil {
+		return stylometry_err
+	}
 	if stylometry_err := stylometry_db.Clauses(clause.OnConflict{DoNothing: true}).Create(&stylometry_users).Error; stylometry_err != nil {
 		return stylometry_err
 	}
@@ -363,15 +410,22 @@ func seedDatabase(stylometry_db *gorm.DB) error {
 	return stylometryResetSequence(stylometry_db, "Likes", "ID")
 }
 
-// stylometrySeedUsers собирает пользователей, чтобы все стартовые лайки имели существующие внешние ключи.
-func stylometrySeedUsers() []model.User {
-	stylometry_users := make([]model.User, 0, 3)
+func stylometrySeedUsers() ([]model.User, error) {
+	stylometry_users := []model.User{
+		{ID: 1, Name: "Демонстратор"},
+		{ID: 2, Name: "Читатель"},
+		{ID: 3, Name: "Редактор"},
+	}
 
-	stylometry_users = append(stylometry_users, model.User{ID: 1, Name: "Демонстратор", Password: "stylometry123"})
-	stylometry_users = append(stylometry_users, model.User{ID: 2, Name: "Читатель", Password: "stylometry123"})
-	stylometry_users = append(stylometry_users, model.User{ID: 3, Name: "Редактор", Password: "stylometry123"})
+	for stylometry_index := range stylometry_users {
+		stylometry_hash, stylometry_err := password.Hash("stylometry123")
+		if stylometry_err != nil {
+			return nil, stylometry_err
+		}
+		stylometry_users[stylometry_index].Password = stylometry_hash
+	}
 
-	return stylometry_users
+	return stylometry_users, nil
 }
 
 // stylometrySeedSamples собирает эталоны авторов и подключает к ним MinIO-медиа.
